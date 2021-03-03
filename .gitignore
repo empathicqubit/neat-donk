@@ -1,3 +1,5 @@
-*.lsmv
 *.log
 catchem/
+state/
+crashsave*
+*.backup

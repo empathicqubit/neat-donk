@@ -4,6 +4,7 @@ config = require "config"
 spritelist = require "spritelist"
 game = require "game"
 mathFunctions = require "mathFunctions"
+util = require "util"
 
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
@@ -640,7 +641,10 @@ function initializePool()
 end
 
 function initializeRun()
-	savestate.load(config.NeatConfig.Filename);
+	print("Hello")
+	print(config.NeatConfig.Filename)
+	local rew = movie.to_rewind(config.NeatConfig.Filename)
+	movie.unsafe_rewind(rew)
 	if config.StartPowerup ~= NIL then
 		game.writePowerup(config.StartPowerup)
 	end
@@ -686,7 +690,6 @@ if pool == nil then
 	initializePool()
 end
 
-
 function nextGenome()
 	pool.currentGenome = pool.currentGenome + 1
 	if pool.currentGenome > #pool.species[pool.currentSpecies].genomes then
@@ -708,7 +711,6 @@ end
 
 form = forms.newform(500, 500, "Mario-Neat")
 netPicture = forms.pictureBox(form, 5, 250,470, 200)
-
 
 --int forms.pictureBox(int formhandle, [int? x = null], [int? y = null], [int? width = null], [int? height = null]) 
 

@@ -1,22 +1,19 @@
 local _M = {}
 
 --[[
-	Change BizhawkDir to your BizHawk directory.
+	Change script dir to your script directory
 --]]
---_M.BizhawkDir = "C:/Users/mmill/Downloads/BizHawk-2.2/"
-_M.BizhawkDir = "X:/B2_BizHawkLab/BizHawk-2.2.2/"
+_M.ScriptDir = "/media/removable/Main/user1000/neat-donk"
 
-_M.StateDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/state/"
-_M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/pool/"
+_M.StateDir = _M.ScriptDir .. "/state/"
+_M.PoolDir = _M.ScriptDir .. "/pool/"
 
 --[[
 	At the moment the first in list will get loaded.
 	Rearrange for other savestates. (will be redone soon)
 --]]
 _M.State = {
- 			"DP1.state",				-- Donut Plains 1
-			"YI1.state",				-- Yoshi's Island 1
-			"YI2.state",				-- Yoshi's Island 2
+	"PiratePanic.lsmv",
 }
 
 --[[
@@ -51,19 +48,23 @@ MaxNodes = 1000000,
 }
 
 _M.ButtonNames = {
-		"A",
-		"B",
-		"X",
-		"Y",
-		"Up",
-		"Down",
-		"Left",
-		"Right",
-	}
+	"B",
+	"Y",
+	"Select",
+	"Start",
+	"Up",
+	"Down",
+	"Left",
+	"Right",
+	"A",
+	"X",
+	"L",
+	"R",
+}
 	
 _M.BoxRadius = 6
 _M.InputSize = (_M.BoxRadius*2+1)*(_M.BoxRadius*2+1)
 
-_M.Running = false
+_M.Running = true
 
 return _M

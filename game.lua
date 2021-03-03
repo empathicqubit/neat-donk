@@ -7,11 +7,11 @@ function _M.getPositions()
 	partyX = memory.readword(0x7e0a2a) - 256
 	partyY = memory.readword(0x7e0a2c) - 256
 		
-        local cameraX = memory.readword(0x7e17ba) - 256
-        local cameraY = memory.readword(0x7e17c0) - 256
+	local cameraX = memory.readword(0x7e17ba) - 256
+	local cameraY = memory.readword(0x7e17c0) - 256
 		
-	_M.screenX = partyX-layer1x
-	_M.screenY = partyY-layer1y
+	_M.screenX = (partyX-cameraX)*2
+	_M.screenY = (partyY-cameraY)*2
 end
 
 function _M.getBananas()
@@ -99,9 +99,8 @@ function _M.getInputs()
 	local inputs = {}
 	local inputDeltaDistance = {}
 	
-	local layer1x = memory.read_s16_le(0x1A);
+	local layer1x = memory.readword(0x7f0000);
 	local layer1y = memory.read_s16_le(0x1C);
-	
 	
 	for dy=-config.BoxRadius*16,config.BoxRadius*16,16 do
 		for dx=-config.BoxRadius*16,config.BoxRadius*16,16 do
@@ -154,11 +153,9 @@ function _M.getInputs()
 end
 
 function _M.clearJoypad()
-	controller = {}
 	for b = 1,#config.ButtonNames do
-		controller["P1 " .. config.ButtonNames[b]] = false
+		input.set(0, b - 1, 0)
 	end
-	joypad.set(controller)
 end
 
 return _M
