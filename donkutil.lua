@@ -2,9 +2,10 @@ util = require "util"
 
 FG_COLOR = 0x00ffffff
 BG_COLOR = 0x99000000
+ENEMY_SIZE = 64
 TILEDATA_POINTER = 0x7e0098
 TILE_SIZE = 32
-TILE_RADIUS = 4
+TILE_RADIUS = 5
 SPRITE_BASE = 0x7e0de2
 SOLID_LESS_THAN = 0x7e00a0
 DIDDY_X_VELOCITY = 0x7e0e02
@@ -118,12 +119,18 @@ function on_input (subframe)
 end
 
 function get_sprite(base_addr)
+    local cameraX = memory.readword(CAMERA_X) - 256
+    local cameraY = memory.readword(CAMERA_Y) - 256
+    local x = memory.readword(base_addr + 0x06)
+    local y = memory.readword(base_addr + 0x0a)
     return {
         base_addr = string.format("%04x", base_addr),
+        screenX = x - 256 - cameraX,
+        screenY = y - 256 - cameraY,
         control = memory.readword(base_addr),
         draworder = memory.readword(base_addr + 0x02),
-        x = memory.readword(base_addr + 0x06),
-        y = memory.readword(base_addr + 0x0a),
+        x = x,
+        y = y,
         jumpheight = memory.readword(base_addr + 0x0e),
         style = memory.readword(base_addr + 0x12),
         currentframe = memory.readword(base_addr + 0x18),
@@ -265,14 +272,11 @@ Tile offset: %04x
             goto continue
         end
 
-        local spriteScreenX = (sprite.x - 256 - cameraX) * 2
-        local spriteScreenY = (sprite.y - 256 - cameraY) * 2
-
         local sprcolor = BG_COLOR
         if detailsidx == idx then
             sprcolor = 0x00ff0000
         end
-        gui.text(spriteScreenX, spriteScreenY, sprite.control..","..sprite.animnum..","..sprite.attr, FG_COLOR, sprcolor)
+        gui.text(sprite.screenX * 2, sprite.screenY * 2, sprite.control..","..sprite.animnum..","..sprite.attr, FG_COLOR, sprcolor)
 
         local filename = os.getenv("HOME").."/neat-donk/catchem/"..sprite.animnum..","..sprite.attr..".png"
         if pokemon and spriteScreenX > (guiWidth / 4) and spriteScreenX < (guiWidth / 4) * 3 and spriteScreenY > (guiHeight / 3) and spriteScreenY < guiHeight and not util.file_exists(filename) then
@@ -318,10 +322,46 @@ Tile offset: %04x
             local screenY = (tileY - 256 - cameraY) * 2
             if screenX < 0 or screenX > guiWidth or
                 screenY < 0 or screenY > guiHeight then
-                goto continue
+                --goto continue
             end
 
             gui.text(screenX, screenY, string.format("%04x\n%02x", offset & 0xffff, tile), FG_COLOR, 0x66888800)
+
+            ::continue::
+        end
+    end
+
+    if cameraX >= 0 then
+        local oam = memory2.OAM:readregion(0x00, 0x220)
+
+        for idx=0,0x200/4-1,1 do
+            local twoBits = (oam[0x201 + math.floor(idx / 4)] >> ((idx % 4) * 2)) & 0x03
+            local screenSprite = {
+                x = math.floor(oam[idx * 4 + 1] * ((-1) ^ (twoBits & 0x01))),
+                y = oam[idx * 4 + 2],
+                tile = oam[idx * 4 + 3],
+                flags = oam[idx * 4 + 4],
+            }
+
+            if screenSprite.x < 0 or screenSprite.y > guiHeight / 2 or screenSprite.y < TILE_SIZE then
+                goto continue
+            end
+
+            for s=1,#sprites,1 do
+                local sprite = sprites[s]
+                if sprite.control == 0 then
+                    goto nextsprite
+                end
+                if screenSprite.x > sprite.screenX - ENEMY_SIZE and screenSprite.x < sprite.screenX + ENEMY_SIZE / 2 and
+                    screenSprite.y > sprite.screenY - ENEMY_SIZE and screenSprite.y < sprite.screenY then
+                    goto continue
+                end
+                ::nextsprite::
+            end
+
+            if screenSprite.flags & 0x21 ~= 0x00 and screenSprite.tile >= 224 and screenSprite.tile <= 238 then
+                gui.text(screenSprite.x * 2, screenSprite.y * 2, screenSprite.tile, 0x00000000, 0x00ffff00)
+            end
 
             ::continue::
         end
