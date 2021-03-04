@@ -31,18 +31,7 @@ showhelp = false
 locked = false
 lockdata = nil
 incsprite = 0
-party_tile_offset = 0
-party_y_ground = 0
-
-last_called = 0
-function set_party_tile_offset (val)
-    if party_tile_offset_debounce == val then
-        return
-    end
-    local sec, usec = utime()
-    last_called = sec * 1000000 + usec
-    party_tile_offset_debounce = val
-end
+questionable_tiles = false
 
 function text(x, y, msg)
     gui.text(x, y, msg, FG_COLOR, BG_COLOR)
@@ -85,6 +74,9 @@ function on_keyhook (key, state)
         elseif key == "8" then
             helddown = true
             rulers = not rulers
+        elseif key == "9" then
+            helddown = true
+            questionable_tiles = not questionable_tiles
         elseif key == "0" then
             showhelp = true
         end
@@ -211,6 +203,7 @@ Sprite Details:
 [6] Enable / Disable Pokemon mode (take screenshots of enemies)
 [7] Enable / Disable float mode (fly with up/down)
 [8] Enable / Disable stage tile rulers
+[9] Enable / Disable hidden tiles
 ]])
         return
     end
@@ -223,6 +216,11 @@ Sprite Details:
 
     if floatmode then
         toggles = toggles.."Float on\n"
+    end
+
+
+    if questionable_tiles then
+        toggles = toggles.."All tiles on\n"
     end
 
     text(0, guiHeight - 40, toggles)
@@ -241,18 +239,19 @@ Sprite Details:
 
     local vertical = memory.readword(TILE_COLLISION_MATH_POINTER) == VERTICAL_POINTER
 
+    local partyX = memory.readword(PARTY_X)
+    local partyY = memory.readword(PARTY_Y)
+    local partyTileOffset = tile_offset_calculation(partyX, partyY, vertical)
+
     local stats = string.format([[
 %s camera %d,%d
 Vertical: %s
 Tile offset: %04x
-]], direction, cameraX, cameraY, vertical, party_tile_offset)
+]], direction, cameraX, cameraY, vertical, partyTileOffset)
 
     text(guiWidth - 200, guiHeight - 60, stats)
 
-    local partyX = memory.readword(PARTY_X) - 256
-    local partyY = memory.readword(PARTY_Y) - 256
-
-    text((partyX - cameraX) * 2, (partyY - cameraY) * 2 + 20, "Party")
+    text((partyX - 256 - cameraX) * 2, (partyY - 256 - cameraY) * 2 + 20, "Party")
 
     local sprites = {}
     for idx = 0,22,1 do
@@ -301,32 +300,32 @@ Tile offset: %04x
     end
 
     local tilePtr = memory.readhword(TILEDATA_POINTER)
-    local solidLessThan = memory.readword(SOLID_LESS_THAN)
 
     for x = -TILE_RADIUS, TILE_RADIUS, 1 do
         for y = -TILE_RADIUS, TILE_RADIUS, 1 do
-            local offset = 0
-            if vertical then
-                offset = party_tile_offset + (y * 24 + x) * 2
-            else
-                offset = party_tile_offset + (x * 16 + y) * 2
-            end
+            local tileX = math.floor((partyX + x * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
+            local tileY = math.floor((partyY + y * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
+
+            local offset = tile_offset_calculation(tileX, tileY, vertical)
 
             local tile = memory.readword(tilePtr + offset)
 
-            if tile == 0 or tile >= solidLessThan then
+            if not tile_is_solid(tileX, tileY, tile, offset) then
                 goto continue
             end
 
-            local tileX = (math.floor(partyX / TILE_SIZE + x) * TILE_SIZE - cameraX)
-            local tileY = (math.floor(party_y_ground / TILE_SIZE + y) * TILE_SIZE - cameraY)
-            gui.text(tileX * 2, tileY * 2, string.format("%04x,%02x", offset & 0xffff, tile), FG_COLOR, 0x66888800)
+            local screenX = (tileX - 256 - cameraX) * 2 
+            local screenY = (tileY - 256 - cameraY) * 2
+            if screenX < 0 or screenX > guiWidth or
+                screenY < 0 or screenY > guiHeight then
+                goto continue
+            end
+
+            gui.text(screenX, screenY, string.format("%04x\n%02x", offset & 0xffff, tile), FG_COLOR, 0x66888800)
 
             ::continue::
         end
     end
-
-
 
     if detailsidx ~= -1 then
         sprite_details(detailsidx)
@@ -337,28 +336,92 @@ Tile offset: %04x
     text(guiWidth - 125, 20, "Help [Hold 0]")
 end
 
-function tile_retrieval()
-    local tile = math.floor(memory.getregister("y") / 2) * 2
-    local newX = memory.readword(0x7e00a6)
-    local partyX = memory.readword(PARTY_X)
-    local oldX = partyX & 0x1f
-    local partyY = memory.readword(PARTY_Y)
+-- 0xb5c94d
+function tile_is_solid(x, y, tileVal, tileOffset)
+    local origTileVal = tileVal
 
-    if oldX - 5 < newX and newX < oldX + 5 and 
-        not jumping and
-        memory.readword(0x7e0034) == partyY then
-        set_party_tile_offset(tile)
-        party_y_ground = partyY - 256
+    if tileVal == 0 or tileOffset == 0 then
+        return false
+    end
+
+    if questionable_tiles then
+        return true
+    end
+
+    local a2 = x & 0x1f
+
+    if tileVal & 0x4000 ~= 0 then
+        a2 = (a2 ~ 0x1f) & 0xffff
+    end
+
+    tileVal = tileVal & 0x3fff
+
+    local solidLessThan = memory.readword(SOLID_LESS_THAN)
+
+    if tileVal >= solidLessThan then
+        return false
+    end
+
+    tileVal = (tileVal << 2) & 0xffff
+
+    if a2 & 0x10 ~= 0 then
+        tileVal = tileVal + 2
+    end
+
+    local tileMeta = memory.readword(memory.readword(0x7e009c) + tileVal)
+
+    if tileMeta & 0x8000 ~=0 then
+        a2 = (a2 ~ 0x000f) & 0xffff
+    end
+
+    if tileMeta & tileVal & 0x2000 ~= 0 then
+        tileMeta = (tileMeta ~ 0x8000) & 0xffff
+    end
+
+    tileMeta = tileMeta & 0x00ff
+
+    if tileMeta == 0 then
+        return false
+    end
+
+    tileMeta = (tileMeta << 1) & 0xffff
+
+    -- FIXME further tests?
+
+    return true
+end
+
+-- Logic from 0xb5c3e1, 0xb5c414, 0xb5c82c
+function tile_offset_calculation (x, y, vertical)
+    local partyX = x - 256
+    local partyY = y - 256
+
+    if not vertical then
+        if partyY < 0 then
+            partyY = 0
+        elseif partyY >= 0x1ff then
+            partyY = 0x1ff
+        end
+
+        partyY = (((~partyY) & 0xffff) + 1) & 0x1e0
+
+        partyX = partyX & 0xffe0
+
+        partyY = ((partyY ~ 0x1e0) & 0xffff) >> 4
+
+        return partyY + partyX
+    else
+        partyY = (((~partyY) & 0xffff) + 1) & 0xffe0
+
+        partyX = (partyX & 0xffe0) >> 4
+
+        partyY = (((partyY ~ 0xffe0) & 0xffff) << 1) & 0xffff
+
+        return partyY + partyX
     end
 end
 
 function on_timer()
-    local sec, usec = utime()
-    local now = sec * 1000000 + usec
-    if last_called + 100 * 1000 < now then
-        party_tile_offset = party_tile_offset_debounce
-    end
-
     set_timer_timeout(100 * 1000)
 end
 
@@ -370,8 +433,7 @@ input.keyhook("5", true)
 input.keyhook("6", true)
 input.keyhook("7", true)
 input.keyhook("8", true)
+input.keyhook("9", true)
 input.keyhook("0", true)
-
-memory2.BUS:registerexec(TILE_RETRIEVAL, tile_retrieval)
 
 set_timer_timeout(100 * 1000)
