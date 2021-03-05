@@ -1066,8 +1066,8 @@ function displayGenome(genome)
 	
 	for o = 1,Outputs do
 		cell = {}
-		cell.x = 220
-		cell.y = 30 + 14 * o
+		cell.x = 400
+		cell.y = 20 + 14 * o
 		cell.value = network.neurons[config.NeatConfig.MaxNodes + o].value
 		cells[config.NeatConfig.MaxNodes+o] = cell
 		local color
@@ -1076,7 +1076,7 @@ function displayGenome(genome)
 		else
 			color = 0x00000000
 		end
-		gui.text(223, 24+14*o, config.ButtonNames[o], color, 0xff000000)
+		gui.text(403, 10+14*o, config.ButtonNames[o], color, 0xff000000)
 	end
 	
 	for n,neuron in pairs(network.neurons) do
