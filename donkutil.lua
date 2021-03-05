@@ -248,7 +248,7 @@ Sprite Details:
 
     local partyX = memory.readword(PARTY_X)
     local partyY = memory.readword(PARTY_Y)
-    local partyTileOffset = tile_offset_calculation(partyX, partyY, vertical)
+    local partyTileOffset = tileOffsetCalculation(partyX, partyY, vertical)
 
     local stats = string.format([[
 %s camera %d,%d
@@ -310,11 +310,11 @@ Tile offset: %04x
             local tileX = math.floor((partyX + x * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
             local tileY = math.floor((partyY + y * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
 
-            local offset = tile_offset_calculation(tileX, tileY, vertical)
+            local offset = tileOffsetCalculation(tileX, tileY, vertical)
 
             local tile = memory.readword(tilePtr + offset)
 
-            if not tile_is_solid(tileX, tileY, tile, offset) then
+            if not tileIsSolid(tileX, tileY, tile, offset) then
                 goto continue
             end
 
@@ -325,7 +325,7 @@ Tile offset: %04x
                 --goto continue
             end
 
-            gui.text(screenX, screenY, string.format("%04x\n%02x", offset & 0xffff, tile), FG_COLOR, 0x66888800)
+            gui.text(screenX, screenY, string.format("%04x\n%02x", bit.band(offset, 0xffff), tile), FG_COLOR, 0x66888800)
 
             ::continue::
         end
@@ -335,9 +335,9 @@ Tile offset: %04x
         local oam = memory2.OAM:readregion(0x00, 0x220)
 
         for idx=0,0x200/4-1,1 do
-            local twoBits = (oam[0x201 + math.floor(idx / 4)] >> ((idx % 4) * 2)) & 0x03
+            local twoBits = bit.band(bit.lrshift(oam[0x201 + math.floor(idx / 4)], ((idx % 4) * 2)), 0x03)
             local screenSprite = {
-                x = math.floor(oam[idx * 4 + 1] * ((-1) ^ (twoBits & 0x01))),
+                x = math.floor(oam[idx * 4 + 1] * ((-1) ^ bit.band(twoBits, 0x01))),
                 y = oam[idx * 4 + 2],
                 tile = oam[idx * 4 + 3],
                 flags = oam[idx * 4 + 4],
@@ -359,7 +359,7 @@ Tile offset: %04x
                 ::nextsprite::
             end
 
-            if screenSprite.flags & 0x21 ~= 0x00 and screenSprite.tile >= 224 and screenSprite.tile <= 238 then
+            if bit.band(screenSprite.flags, 0x21) ~= 0x00 and screenSprite.tile >= 224 and screenSprite.tile <= 238 then
                 gui.text(screenSprite.x * 2, screenSprite.y * 2, screenSprite.tile, 0x00000000, 0x00ffff00)
             end
 
@@ -376,8 +376,38 @@ Tile offset: %04x
     text(guiWidth - 125, 20, "Help [Hold 0]")
 end
 
+-- Logic from 0xb5c3e1, 0xb5c414, 0xb5c82c
+function tileOffsetCalculation (x, y, vertical)
+    local newX = x - 256
+    local newY = y - 256
+
+    if not vertical then
+        if newY < 0 then
+            newY = 0
+        elseif newY >= 0x1ff then
+            newY = 0x1ff
+        end
+
+        newY = bit.band(bit.band(bit.bnot(newY), 0xffff) + 1, 0x1e0)
+
+        newX = bit.band(newX, 0xffe0)
+
+        newY = bit.lrshift(bit.band(bit.bxor(newY, 0x1e0), 0xffff), 4)
+
+        return newY + newX
+    else
+        newY = bit.band(bit.band(bit.bnot(newY), 0xffff) + 1, 0xffe0)
+
+        newX = bit.lrshift(bit.band(newX, 0xffe0), 4)
+
+        newY = bit.band(bit.lshift(bit.band(bit.bxor(newY, 0xffe0), 0xffff), 1), 0xffff)
+
+        return newY + newX
+    end
+end
+
 -- 0xb5c94d
-function tile_is_solid(x, y, tileVal, tileOffset)
+function tileIsSolid(x, y, tileVal, tileOffset)
     local origTileVal = tileVal
 
     if tileVal == 0 or tileOffset == 0 then
@@ -388,13 +418,13 @@ function tile_is_solid(x, y, tileVal, tileOffset)
         return true
     end
 
-    local a2 = x & 0x1f
+    local a2 = bit.band(x, 0x1f)
 
-    if tileVal & 0x4000 ~= 0 then
-        a2 = (a2 ~ 0x1f) & 0xffff
+    if bit.band(tileVal, 0x4000) ~= 0 then
+        a2 = bit.band(bit.bxor(a2, 0x1f), 0xffff)
     end
 
-    tileVal = tileVal & 0x3fff
+    tileVal = bit.band(tileVal, 0x3fff)
 
     local solidLessThan = memory.readword(SOLID_LESS_THAN)
 
@@ -402,63 +432,33 @@ function tile_is_solid(x, y, tileVal, tileOffset)
         return false
     end
 
-    tileVal = (tileVal << 2) & 0xffff
+    tileVal = bit.band(bit.lshift(tileVal, 2), 0xffff)
 
-    if a2 & 0x10 ~= 0 then
+    if bit.band(a2, 0x10) ~= 0 then
         tileVal = tileVal + 2
     end
 
     local tileMeta = memory.readword(memory.readword(0x7e009c) + tileVal)
 
-    if tileMeta & 0x8000 ~=0 then
-        a2 = (a2 ~ 0x000f) & 0xffff
+    if bit.band(tileMeta, 0x8000) ~=0 then
+        a2 = bit.band(bit.bxor(a2, 0x000f), 0xffff)
     end
 
-    if tileMeta & tileVal & 0x2000 ~= 0 then
-        tileMeta = (tileMeta ~ 0x8000) & 0xffff
+    if bit.band(tileMeta, tileVal, 0x2000) ~= 0 then
+        tileMeta = bit.band(bit.bxor(tileMeta, 0x8000), 0xffff)
     end
 
-    tileMeta = tileMeta & 0x00ff
+    tileMeta = bit.band(tileMeta, 0x00ff)
 
     if tileMeta == 0 then
         return false
     end
 
-    tileMeta = (tileMeta << 1) & 0xffff
+    tileMeta = bit.band(bit.bxor(tileMeta, 1), 0xffff)
 
     -- FIXME further tests?
 
     return true
-end
-
--- Logic from 0xb5c3e1, 0xb5c414, 0xb5c82c
-function tile_offset_calculation (x, y, vertical)
-    local partyX = x - 256
-    local partyY = y - 256
-
-    if not vertical then
-        if partyY < 0 then
-            partyY = 0
-        elseif partyY >= 0x1ff then
-            partyY = 0x1ff
-        end
-
-        partyY = (((~partyY) & 0xffff) + 1) & 0x1e0
-
-        partyX = partyX & 0xffe0
-
-        partyY = ((partyY ~ 0x1e0) & 0xffff) >> 4
-
-        return partyY + partyX
-    else
-        partyY = (((~partyY) & 0xffff) + 1) & 0xffe0
-
-        partyX = (partyX & 0xffe0) >> 4
-
-        partyY = (((partyY ~ 0xffe0) & 0xffff) << 1) & 0xffff
-
-        return partyY + partyX
-    end
 end
 
 function on_timer()

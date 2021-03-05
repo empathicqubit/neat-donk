@@ -6,6 +6,40 @@ game = require "game"
 mathFunctions = require "mathFunctions"
 util = require "util"
 
+guiWidth, guiHeight = gui.resolution()
+form = gui.renderctx.new(500, 500)
+netPicture = gui.renderctx.new(470, 200)
+runInitialized = {}
+frameAdvanced = {}
+
+--int forms.pictureBox(int formhandle, [int? x = null], [int? y = null], [int? width = null], [int? height = null]) 
+
+--[[ GenerationLabel = forms.label(form, "Generation: " .. pool.generation, 5, 5)
+SpeciesLabel = forms.label(form, "Species: " .. pool.currentSpecies, 130, 5)
+GenomeLabel = forms.label(form, "Genome: " .. pool.currentGenome, 230, 5)
+MeasuredLabel = forms.label(form, "Measured: " .. "", 330, 5)
+
+FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
+MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
+
+BananasLabel = forms.label(form, "Bananas: " .. "", 5, 65)
+CoinsLabel = forms.label(form, "Coins: " .. "", 130, 65, 90, 14)
+LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
+DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
+PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14) ]]
+
+--[[ startButton = forms.button(form, "Start", flipState, 155, 102)
+
+restartButton = forms.button(form, "Restart", initializePool, 155, 102)
+saveButton = forms.button(form, "Save", savePool, 5, 102)
+loadButton = forms.button(form, "Load", loadPool, 80, 102)
+playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
+
+saveLoadLabel = forms.label(form, "Save/Load:", 5, 129) ]]
+saveLoadFile = config.NeatConfig.Filename .. ".pool"
+spritelist.InitSpriteList()
+spritelist.InitExtSpriteList()
+
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
 
@@ -149,14 +183,13 @@ function evaluateNetwork(network, inputs, inputDeltas)
 	table.insert(inputs, 1)
 	table.insert(inputDeltas,99)
 	if #inputs ~= Inputs then
-		console.writeline("Incorrect number of neural network inputs.")
+		print("Incorrect number of neural network inputs.")
 		return {}
 	end
 	
 
 	for i=1,Inputs do
 		network.neurons[i].value = inputs[i] * inputDeltas[i]
-		--network.neurons[i].value = inputs[i]
 	end
 	
 	for _,neuron in pairs(network.neurons) do
@@ -174,7 +207,7 @@ function evaluateNetwork(network, inputs, inputDeltas)
 	
 	local outputs = {}
 	for o=1,Outputs do
-		local button = "P1 " .. config.ButtonNames[o]
+		local button = o - 1
 		if network.neurons[config.NeatConfig.MaxNodes+o].value > 0 then
 			outputs[button] = true
 		else
@@ -625,11 +658,10 @@ function newGeneration()
 	
 	pool.generation = pool.generation + 1
 	
-	--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
-	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
+	writeFile(saveLoadFile .. ".gen" .. pool.generation .. ".pool")
 end
 	
-function initializePool()
+function initializePool(after)
 	pool = newPool()
 
 	for i=1,config.NeatConfig.Population do
@@ -637,32 +669,48 @@ function initializePool()
 		addToSpecies(basic)
 	end
 
-	initializeRun()
+	initializeRun(after)
 end
 
-function initializeRun()
-	print("Hello")
-	print(config.NeatConfig.Filename)
-	local rew = movie.to_rewind(config.NeatConfig.Filename)
-	movie.unsafe_rewind(rew)
-	if config.StartPowerup ~= NIL then
-		game.writePowerup(config.StartPowerup)
-	end
-	rightmost = 0
-	pool.currentFrame = 0
-	timeout = config.NeatConfig.TimeoutConstant
-	game.clearJoypad()
-	startBananas = game.getBananas()
-	startCoins = game.getCoins()
-	startLives = game.getLives()
-	checkMarioCollision = true
-	marioHitCounter = 0
-	powerUpCounter = 0
-	powerUpBefore = game.getPowerup()
-	local species = pool.species[pool.currentSpecies]
-	local genome = species.genomes[pool.currentGenome]
-	generateNetwork(genome)
-	evaluateCurrent()
+function on_timer()
+    if config.StartPowerup ~= NIL then
+        game.writePowerup(config.StartPowerup)
+    end
+    rightmost = 0
+    pool.currentFrame = 0
+    timeout = config.NeatConfig.TimeoutConstant
+    game.clearJoypad()
+    startBananas = game.getBananas()
+    startCoins = game.getCoins()
+    startLives = game.getLives()
+    checkPartyCollision = true
+    partyHitCounter = 0
+    powerUpCounter = 0
+    powerUpBefore = game.getPowerup()
+    local species = pool.species[pool.currentSpecies]
+    local genome = species.genomes[pool.currentGenome]
+    generateNetwork(genome)
+    evaluateCurrent()
+    for i=#runInitialized,1,-1 do
+        table.remove(runInitialized, i)()
+    end
+end
+
+local rew = movie.to_rewind(config.NeatConfig.Filename)
+
+function on_post_rewind()
+    set_timer_timeout(1)
+end
+
+function on_video()
+    gui.kill_frame()
+end
+
+function initializeRun(after)
+    settings.set_speed(1)
+    gui.subframe_update(false)
+    table.insert(runInitialized, after)
+    movie.unsafe_rewind(rew)
 end
 
 function evaluateCurrent()
@@ -673,21 +721,219 @@ function evaluateCurrent()
 	inputs, inputDeltas = game.getInputs()
 	
 	controller = evaluateNetwork(genome.network, inputs, inputDeltas)
-	
-	if controller["P1 Left"] and controller["P1 Right"] then
-		controller["P1 Left"] = false
-		controller["P1 Right"] = false
+
+	if controller[6] and controller[7] then
+		controller[6] = false
+		controller[7] = false
 	end
-	if controller["P1 Up"] and controller["P1 Down"] then
-		controller["P1 Up"] = false
-		controller["P1 Down"] = false
+	if controller[4] and controller[5] then
+		controller[4] = false
+		controller[5] = false
 	end
 
-	joypad.set(controller)
+    for b=1,#config.ButtonNames,1 do
+        if controller[b] then
+            input.set(0, b - 1, 1)
+        else
+            input.set(0, b - 1, 0)
+        end
+    end
 end
 
-if pool == nil then
-	initializePool()
+function on_input()
+    for i=#frameAdvanced,1,-1 do
+        table.remove(frameAdvanced, i)()
+    end
+end
+
+function on_paint()
+    gui.left_gap(500)
+    gui.top_gap(0)
+    gui.bottom_gap(0)
+    gui.right_gap(0)
+    if genomeDisplay ~= nil and movie.currentframe() % 10 == 0 then
+        displayGenome(genomeDisplay)
+    end
+    gui.renderctx.setnull()
+    form:render():draw(-500, 0)
+end
+
+function advanceFrame(after)
+    table.insert(frameAdvanced, after)
+    --exec("+advance-frame")
+end
+
+function mainLoop (species, genome)
+    advanceFrame(function()
+        if not config.Running then
+            return
+        end
+
+        if species ~= nil and genome ~= nil then
+            local measured = 0
+            local total = 0
+            for _,species in pairs(pool.species) do
+                for _,genome in pairs(species.genomes) do
+                    total = total + 1
+                    if genome.fitness ~= 0 then
+                        measured = measured + 1
+                    end
+                end
+            end
+            
+            gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
+        --[[ 	forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
+            forms.settext(GenerationLabel, "Generation: " .. pool.generation)
+            forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
+            forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
+            forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
+            forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
+            forms.settext(BananasLabel, "Bananas: " .. (game.getBananas() - startBananas))
+            forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
+            forms.settext(LivesLabel, "Lives: " .. Lives)
+            forms.settext(DmgLabel, "Damage: " .. partyHitCounter)
+            forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
+        ]]
+            pool.currentFrame = pool.currentFrame + 1
+        end
+
+        species = pool.species[pool.currentSpecies]
+        genome = species.genomes[pool.currentGenome]
+
+        genomeDisplay = genome
+        
+        if pool.currentFrame%5 == 0 then
+            evaluateCurrent()
+        end
+
+        for b=1,#config.ButtonNames,1 do
+            if controller[b] then
+                input.set(0, b - 1, 1)
+            else
+                input.set(0, b - 1, 0)
+            end
+        end
+
+        game.getPositions()
+        if partyX > rightmost then
+            rightmost = partyX
+            timeout = config.NeatConfig.TimeoutConstant
+        end
+        
+        local hitTimer = game.getHitTimer()
+        
+        if checkPartyCollision == true then
+            if hitTimer > 0 then
+                partyHitCounter = partyHitCounter + 1
+                --print("party took damage, hit counter: " .. partyHitCounter)
+                checkPartyCollision = false
+            end
+        end
+        
+        if hitTimer == 0 then
+            checkPartyCollision = true
+        end
+        
+        powerUp = game.getPowerup()
+        if powerUp > 0 then
+            if powerUp ~= powerUpBefore then
+                powerUpCounter = powerUpCounter+1
+                powerUpBefore = powerUp
+            end
+        end
+        
+        Lives = game.getLives()
+
+        timeout = timeout - 1
+        
+        local timeoutBonus = pool.currentFrame / 4
+        if timeout + timeoutBonus <= 0 then
+        
+            local bananas = game.getBananas() - startBananas
+            local coins = game.getCoins() - startCoins
+            
+            print("Bananas: " .. bananas .. " coins: " .. coins)
+
+            local bananaCoinsFitness = (bananas * 50) + (coins * 0.2)
+            if (bananas + coins) > 0 then 
+                print("Bananas and Coins added " .. bananaCoinsFitness .. " fitness")
+            end
+            
+            local hitPenalty = partyHitCounter * 100
+            local powerUpBonus = powerUpCounter * 100
+        
+            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+
+            if startLives < Lives then
+                local ExtraLiveBonus = (Lives - startLives)*1000
+                fitness = fitness + ExtraLiveBonus
+                print("ExtraLiveBonus added " .. ExtraLiveBonus)
+            end
+
+            if rightmost > 4816 then
+                fitness = fitness + 1000
+                print("!!!!!!Beat level!!!!!!!")
+            end
+            if fitness == 0 then
+                fitness = -1
+            end
+            genome.fitness = fitness
+            
+            if fitness > pool.maxFitness then
+                pool.maxFitness = fitness
+                writeFile(saveLoadFile .. ".gen" .. pool.generation .. ".pool")
+            end
+            
+            print("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
+            pool.currentSpecies = 1
+            pool.currentGenome = 1
+            while fitnessAlreadyMeasured() do
+                nextGenome()
+            end
+            initializeRun(function() 
+                mainLoop(species, genome)
+            end)
+            return
+        end
+
+        advanceFrame(mainLoop)
+    end)
+
+end
+
+function writeFile(filename)
+        local file = io.open(filename, "w")
+        file:write(pool.generation .. "\n")
+        file:write(pool.maxFitness .. "\n")
+        file:write(#pool.species .. "\n")
+        for n,species in pairs(pool.species) do
+                file:write(species.topFitness .. "\n")
+                file:write(species.staleness .. "\n")
+                file:write(#species.genomes .. "\n")
+                for m,genome in pairs(species.genomes) do
+                        file:write(genome.fitness .. "\n")
+                        file:write(genome.maxneuron .. "\n")
+                        for mutation,rate in pairs(genome.mutationRates) do
+                                file:write(mutation .. "\n")
+                                file:write(rate .. "\n")
+                        end
+                        file:write("done\n")
+                        
+                        file:write(#genome.genes .. "\n")
+                        for l,gene in pairs(genome.genes) do
+                                file:write(gene.into .. " ")
+                                file:write(gene.out .. " ")
+                                file:write(gene.weight .. " ")
+                                file:write(gene.innovation .. " ")
+                                if(gene.enabled) then
+                                        file:write("1\n")
+                                else
+                                        file:write("0\n")
+                                end
+                        end
+                end
+        end
+        file:close()
 end
 
 function nextGenome()
@@ -709,13 +955,10 @@ function fitnessAlreadyMeasured()
 	return genome.fitness ~= 0
 end
 
-form = forms.newform(500, 500, "Mario-Neat")
-netPicture = forms.pictureBox(form, 5, 250,470, 200)
-
---int forms.pictureBox(int formhandle, [int? x = null], [int? y = null], [int? width = null], [int? height = null]) 
-
 function displayGenome(genome)
-	forms.clear(netPicture,0x80808080)
+    netPicture:clear()
+    netPicture:set()
+    gui.solidrectangle(0, 0, 470, 200, 0x80808080)
 	local network = genome.network
 	local cells = {}
 	local i = 1
@@ -739,17 +982,16 @@ function displayGenome(genome)
 	for o = 1,Outputs do
 		cell = {}
 		cell.x = 220
-		cell.y = 30 + 8 * o
+		cell.y = 30 + 14 * o
 		cell.value = network.neurons[config.NeatConfig.MaxNodes + o].value
 		cells[config.NeatConfig.MaxNodes+o] = cell
 		local color
 		if cell.value > 0 then
-			color = 0xFF0000FF
+			color = 0x000000FF
 		else
-			color = 0xFF000000
+			color = 0x00000000
 		end
-		--gui.drawText(223, 24+8*o, config.ButtonNames[o], color, 9)
-		forms.drawText(netPicture,223, 24+8*o, config.ButtonNames[o], color, 9)
+		gui.text(223, 24+14*o, config.ButtonNames[o], color, 0xff000000)
 	end
 	
 	for n,neuron in pairs(network.neurons) do
@@ -799,9 +1041,15 @@ function displayGenome(genome)
 		end
 	end
 	
-	--gui.drawBox(50-config.BoxRadius*5-3,70-config.BoxRadius*5-3,50+config.BoxRadius*5+2,70+config.BoxRadius*5+2,0xFF000000, 0x80808080)
-	forms.drawBox(netPicture, 50-config.BoxRadius*5-3,70-config.BoxRadius*5-3,50+config.BoxRadius*5+2,70+config.BoxRadius*5+2,0xFF000000, 0x80808080)
-	--oid forms.drawBox(int componenthandle, int x, int y, int x2, int y2, [color? line = null], [color? background = null]) 
+	gui.rectangle(
+        50-config.BoxRadius*5-3,
+        70-config.BoxRadius*5-3,
+        config.BoxRadius*10+5,
+        config.BoxRadius*10+5,
+        2,
+        0xFF000000, 
+        0x80808080
+    )
 	for n,cell in pairs(cells) do
 		if n > Inputs or cell.value ~= 0 then
 			local color = math.floor((cell.value+1)/2*256)
@@ -812,8 +1060,15 @@ function displayGenome(genome)
 				opacity = 0x50000000
 			end
 			color = opacity + color*0x10000 + color*0x100 + color
-			forms.drawBox(netPicture,cell.x-2,cell.y-2,cell.x+2,cell.y+2,opacity,color)
-			--gui.drawBox(cell.x-2,cell.y-2,cell.x+2,cell.y+2,opacity,color)
+			gui.rectangle(
+                math.floor(cell.x-5),
+                math.floor(cell.y-5),
+                5,
+                5,
+                1,
+                0x00,
+                color
+            )
 		end
 	end
 	for _,gene in pairs(genome.genes) do
@@ -831,65 +1086,40 @@ function displayGenome(genome)
 			else
 				color = opacity + 0x800000 + 0x100*color
 			end
-			--gui.drawLine(c1.x+1, c1.y, c2.x-3, c2.y, color)
-			forms.drawLine(netPicture,c1.x+1, c1.y, c2.x-3, c2.y, color)
+			gui.line(
+                math.floor(c1.x+1), 
+                math.floor(c1.y), 
+                math.floor(c2.x-3),
+                math.floor(c2.y),
+                color
+            )
 		end
 	end
 	
-	--gui.drawBox(49,71,51,78,0x00000000,0x80FF0000)
-	forms.drawBox(netPicture, 49,71,51,78,0x00000000,0x80FF0000)
-	--if forms.ischecked(showMutationRates) then
-		local pos = 100
-		for mutation,rate in pairs(genome.mutationRates) do
-			--gui.drawText(100, pos, mutation .. ": " .. rate, 0xFF000000, 10)
-			forms.drawText(netPicture,100, pos, mutation .. ": " .. rate, 0xFF000000, 10)
-			--forms.drawText(pictureBox,400,pos, mutation .. ": " .. rate)
-			
-			--void forms.drawText(int componenthandle, int x, int y, string message, [color? forecolor = null], [color? backcolor = null], [int? fontsize = null], [string fontfamily = null], [string fontstyle = null], [string horizalign = null], [string vertalign = null]) 
+	gui.rectangle(
+        49,
+        71,
+        2,
+        7,
+        0x00000000,
+        0x80FF0000
+    )
 
-			pos = pos + 8
-		end
-	--end
-	forms.refresh(netPicture)
-end
+    local pos = 100
+    for mutation,rate in pairs(genome.mutationRates) do
+        gui.text(100, pos, mutation .. ": " .. rate, 0x00000000, 0xff000000)
 
-function writeFile(filename)
-        local file = io.open(filename, "w")
-        file:write(pool.generation .. "\n")
-        file:write(pool.maxFitness .. "\n")
-        file:write(#pool.species .. "\n")
-        for n,species in pairs(pool.species) do
-                file:write(species.topFitness .. "\n")
-                file:write(species.staleness .. "\n")
-                file:write(#species.genomes .. "\n")
-                for m,genome in pairs(species.genomes) do
-                        file:write(genome.fitness .. "\n")
-                        file:write(genome.maxneuron .. "\n")
-                        for mutation,rate in pairs(genome.mutationRates) do
-                                file:write(mutation .. "\n")
-                                file:write(rate .. "\n")
-                        end
-                        file:write("done\n")
-                        
-                        file:write(#genome.genes .. "\n")
-                        for l,gene in pairs(genome.genes) do
-                                file:write(gene.into .. " ")
-                                file:write(gene.out .. " ")
-                                file:write(gene.weight .. " ")
-                                file:write(gene.innovation .. " ")
-                                if(gene.enabled) then
-                                        file:write("1\n")
-                                else
-                                        file:write("0\n")
-                                end
-                        end
-                end
-        end
-        file:close()
+        pos = pos + 14
+    end
+
+    local bitmap = netPicture:render()
+    form:set()
+    bitmap:draw(5, 250)
+    gui.renderctx.setnull()
 end
 
 function savePool()
-	local filename = forms.gettext(saveLoadFile)
+	local filename = saveLoadFile
 	print(filename)
 	writeFile(filename)
 end
@@ -906,7 +1136,7 @@ function mysplit(inputstr, sep)
         return t
 end
 
-function loadFile(filename)
+function loadFile(filename, after)
 		print("Loading pool from " .. filename)
         local file = io.open(filename, "r")
         pool = newPool()
@@ -961,9 +1191,11 @@ function loadFile(filename)
         while fitnessAlreadyMeasured() do
                 nextGenome()
         end
-        initializeRun()
-        pool.currentFrame = pool.currentFrame + 1
-		print("Pool loaded.")
+        initializeRun(function()
+            pool.currentFrame = pool.currentFrame + 1
+            print("Pool loaded.")
+            after()
+        end)
 end
 
 function flipState()
@@ -976,11 +1208,9 @@ function flipState()
 	end
 end
  
-function loadPool()
+function loadPool(after)
 	filename = forms.openfile("DP1.state.pool",config.PoolDir) 
-	--local filename = forms.gettext(saveLoadFile)
-	forms.settext(saveLoadFile, filename)
-	loadFile(filename)
+	loadFile(filename, after)
 end
 
 function playTop()
@@ -999,167 +1229,24 @@ function playTop()
 	pool.currentSpecies = maxs
 	pool.currentGenome = maxg
 	pool.maxFitness = maxfitness
-	forms.settext(MaxLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
+	--forms.settext(MaxLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
 	initializeRun()
 	pool.currentFrame = pool.currentFrame + 1
 	return
 end
 
-function onExit()
-	forms.destroy(form)
+function on_quit()
+    netPicture:clear()
+    form:clear()
 end
 
-writeFile(config.PoolDir.."temp.pool")
-
-event.onexit(onExit)
-
-GenerationLabel = forms.label(form, "Generation: " .. pool.generation, 5, 5)
-SpeciesLabel = forms.label(form, "Species: " .. pool.currentSpecies, 130, 5)
-GenomeLabel = forms.label(form, "Genome: " .. pool.currentGenome, 230, 5)
-MeasuredLabel = forms.label(form, "Measured: " .. "", 330, 5)
-
-FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
-MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
-
-BananasLabel = forms.label(form, "Bananas: " .. "", 5, 65)
-CoinsLabel = forms.label(form, "Coins: " .. "", 130, 65, 90, 14)
-LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
-DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
-PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14)
-
-startButton = forms.button(form, "Start", flipState, 155, 102)
-
-restartButton = forms.button(form, "Restart", initializePool, 155, 102)
-saveButton = forms.button(form, "Save", savePool, 5, 102)
-loadButton = forms.button(form, "Load", loadPool, 80, 102)
-playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
-
-saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 170, 25, nil, 5, 148)
-saveLoadLabel = forms.label(form, "Save/Load:", 5, 129)
-spritelist.InitSpriteList()
-spritelist.InitExtSpriteList()
-while true do
-	
-	if config.Running == true then
-
-	local species = pool.species[pool.currentSpecies]
-	local genome = species.genomes[pool.currentGenome]
-	
-	displayGenome(genome)
-	
-	if pool.currentFrame%5 == 0 then
-		evaluateCurrent()
-	end
-
-	joypad.set(controller)
-
-	game.getPositions()
-	if partyX > rightmost then
-		rightmost = partyX
-		timeout = config.NeatConfig.TimeoutConstant
-	end
-	
-	local hitTimer = game.getHitTimer()
-	
-	if checkMarioCollision == true then
-		if hitTimer > 0 then
-			marioHitCounter = marioHitCounter + 1
-			--console.writeline("Mario took damage, hit counter: " .. marioHitCounter)
-			checkMarioCollision = false
-		end
-	end
-	
-	if hitTimer == 0 then
-		checkMarioCollision = true
-	end
-	
-	powerUp = game.getPowerup()
-	if powerUp > 0 then
-		if powerUp ~= powerUpBefore then
-			powerUpCounter = powerUpCounter+1
-			powerUpBefore = powerUp
-		end
-	end
-	
-	Lives = game.getLives()
-
-	timeout = timeout - 1
-	
-	local timeoutBonus = pool.currentFrame / 4
-	if timeout + timeoutBonus <= 0 then
-	
-		local bananas = game.getBananas() - startBananas
-		local coins = game.getCoins() - startCoins
-		
-		--console.writeline("Bananas: " .. bananas .. " coins: " .. coins)
-
-		local bananaCoinsFitness = (bananas * 50) + (coins * 0.2)
-		if (bananas + coins) > 0 then 
-			console.writeline("Bananas and Coins added " .. bananaCoinsFitness .. " fitness")
-		end
-		
-		local hitPenalty = marioHitCounter * 100
-		local powerUpBonus = powerUpCounter * 100
-	
-		local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
-
-		if startLives < Lives then
-			local ExtraLiveBonus = (Lives - startLives)*1000
-			fitness = fitness + ExtraLiveBonus
-			console.writeline("ExtraLiveBonus added " .. ExtraLiveBonus)
-		end
-
-		if rightmost > 4816 then
-			fitness = fitness + 1000
-			console.writeline("!!!!!!Beat level!!!!!!!")
-		end
-		if fitness == 0 then
-			fitness = -1
-		end
-		genome.fitness = fitness
-		
-		if fitness > pool.maxFitness then
-			pool.maxFitness = fitness
-			--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
-			writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
-		end
-		
-		console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
-		pool.currentSpecies = 1
-		pool.currentGenome = 1
-		while fitnessAlreadyMeasured() do
-			nextGenome()
-		end
-		initializeRun()
-	end
-
-	local measured = 0
-	local total = 0
-	for _,species in pairs(pool.species) do
-		for _,genome in pairs(species.genomes) do
-			total = total + 1
-			if genome.fitness ~= 0 then
-				measured = measured + 1
-			end
-		end
-	end
-	
-	gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
-	forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
-	forms.settext(GenerationLabel, "Generation: " .. pool.generation)
-	forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
-	forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
-	forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
-	forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
-	forms.settext(BananasLabel, "Bananas: " .. (game.getBananas() - startBananas))
-	forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
-	forms.settext(LivesLabel, "Lives: " .. Lives)
-	forms.settext(DmgLabel, "Damage: " .. marioHitCounter)
-	forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
-
-	pool.currentFrame = pool.currentFrame + 1
-	
-	end
-	emu.frameadvance();
-	
+if pool == nil then
+	initializePool(function() 
+        writeFile(config.PoolDir.."temp.pool")
+        mainLoop()
+    end)
+else
+    writeFile(config.PoolDir.."temp.pool")
+    mainLoop()
 end
+

@@ -1,4 +1,4 @@
--- Idea from: https://github.com/kevino5233/MarIO_Enhanced/
+-- Idea from: https://github.com/kevino5233/party_Enhanced/
 -- Spritelist from: https://www.smwcentral.net/?p=viewthread&t=7562
 -- Extended spritelist: https://web.archive.org/web/20170709102356/www.smwiki.net/wiki/RAM_Address/$7E:170B
 --
@@ -163,7 +163,7 @@ _M.BadSprites = {
 				0x71,		-- Super Koopa, red cape, swoop.
 				0x72,		-- Super Koopa, yellow cape, swoop.
 				0x73,		-- Super Koopa, feather/yellow cape (X&1).
-				0x7A,		-- Firework, makes Mario temporarily invisible.
+				0x7A,		-- Firework, makes party temporarily invisible.
 				0x86,		-- Wiggler.
 				0x8D,		-- Ghost house exit sign and door.
 				0x8E,		-- Invisible "Warp Hole" blocks. (!)

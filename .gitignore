@@ -3,3 +3,4 @@ catchem/
 state/
 crashsave*
 *.backup
+*.pool
