@@ -192,6 +192,7 @@ function _M.getExtendedSprites()
 	return extended
 end
 
+callcount = 0
 function _M.getInputs()
 	_M.getPositions()
 	

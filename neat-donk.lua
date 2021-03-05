@@ -7,26 +7,12 @@ mathFunctions = require "mathFunctions"
 util = require "util"
 
 guiWidth, guiHeight = gui.resolution()
-form = gui.renderctx.new(500, 500)
-netPicture = gui.renderctx.new(470, 200)
+form = nil
+netPicture = nil
 runInitialized = {}
 frameAdvanced = {}
 
 --int forms.pictureBox(int formhandle, [int? x = null], [int? y = null], [int? width = null], [int? height = null]) 
-
---[[ GenerationLabel = forms.label(form, "Generation: " .. pool.generation, 5, 5)
-SpeciesLabel = forms.label(form, "Species: " .. pool.currentSpecies, 130, 5)
-GenomeLabel = forms.label(form, "Genome: " .. pool.currentGenome, 230, 5)
-MeasuredLabel = forms.label(form, "Measured: " .. "", 330, 5)
-
-FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
-MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
-
-BananasLabel = forms.label(form, "Bananas: " .. "", 5, 65)
-CoinsLabel = forms.label(form, "Coins: " .. "", 130, 65, 90, 14)
-LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
-DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
-PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14) ]]
 
 --[[ startButton = forms.button(form, "Start", flipState, 155, 102)
 
@@ -731,11 +717,11 @@ function evaluateCurrent()
 		controller[5] = false
 	end
 
-    for b=1,#config.ButtonNames,1 do
+    for b=0,#config.ButtonNames - 1,1 do
         if controller[b] then
-            input.set(0, b - 1, 1)
+            input.set(0, b, 1)
         else
-            input.set(0, b - 1, 0)
+            input.set(0, b, 0)
         end
     end
 end
@@ -746,6 +732,31 @@ function on_input()
     end
 end
 
+formCtx = gui.renderctx.new(500, 500)
+function displayForm()
+	formCtx:set()
+	gui.rectangle(0, 0, 500, 500, 1, 0x00ffffff, 0x00000000)
+	gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
+
+	--gui.text(5, 30, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
+	gui.text(5, 5, "Generation: " .. pool.generation)
+	gui.text(130, 5, "Species: " .. pool.currentSpecies)
+	gui.text(230, 5, "Genome: " .. pool.currentGenome)
+	gui.text(130, 30, "Max: " .. math.floor(pool.maxFitness))
+	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
+	gui.text(5, 65, "Bananas: " .. (game.getBananas() - startBananas))
+	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
+	gui.text(130, 80, "Lives: " .. Lives)
+	gui.text(230, 65, "Damage: " .. partyHitCounter)
+	gui.text(230, 80, "PowerUp: " .. powerUpCounter)
+
+	if netPicture ~= nil then
+		netPicture:draw(5, 200)
+	end
+    form = formCtx:render()
+	gui.renderctx.setnull()
+end
+
 function on_paint()
     gui.left_gap(500)
     gui.top_gap(0)
@@ -753,9 +764,12 @@ function on_paint()
     gui.right_gap(0)
     if genomeDisplay ~= nil and movie.currentframe() % 10 == 0 then
         displayGenome(genomeDisplay)
+        displayForm()
     end
     gui.renderctx.setnull()
-    form:render():draw(-500, 0)
+    if form ~= nil then
+        form:draw(-500, 0)
+    end
 end
 
 function advanceFrame(after)
@@ -781,19 +795,6 @@ function mainLoop (species, genome)
                 end
             end
             
-            gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
-        --[[ 	forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
-            forms.settext(GenerationLabel, "Generation: " .. pool.generation)
-            forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
-            forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
-            forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
-            forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
-            forms.settext(BananasLabel, "Bananas: " .. (game.getBananas() - startBananas))
-            forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
-            forms.settext(LivesLabel, "Lives: " .. Lives)
-            forms.settext(DmgLabel, "Damage: " .. partyHitCounter)
-            forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
-        ]]
             pool.currentFrame = pool.currentFrame + 1
         end
 
@@ -806,11 +807,11 @@ function mainLoop (species, genome)
             evaluateCurrent()
         end
 
-        for b=1,#config.ButtonNames,1 do
+        for b=0,#config.ButtonNames - 1,1 do
             if controller[b] then
-                input.set(0, b - 1, 1)
+                input.set(0, b, 1)
             else
-                input.set(0, b - 1, 0)
+                input.set(0, b, 0)
             end
         end
 
@@ -955,10 +956,10 @@ function fitnessAlreadyMeasured()
 	return genome.fitness ~= 0
 end
 
+genomeCtx = gui.renderctx.new(470, 200)
 function displayGenome(genome)
-    netPicture:clear()
-    netPicture:set()
-    gui.solidrectangle(0, 0, 470, 200, 0x80808080)
+    genomeCtx:set()
+    gui.solidrectangle(0, 0, 470, 200, 0x00606060)
 	local network = genome.network
 	local cells = {}
 	local i = 1
@@ -1048,18 +1049,18 @@ function displayGenome(genome)
         config.BoxRadius*10+5,
         2,
         0xFF000000, 
-        0x80808080
+        0x00808080
     )
 	for n,cell in pairs(cells) do
 		if n > Inputs or cell.value ~= 0 then
 			local color = math.floor((cell.value+1)/2*256)
 			if color > 255 then color = 255 end
 			if color < 0 then color = 0 end
-			local opacity = 0xFF000000
+			local alpha = 0x50000000
 			if cell.value == 0 then
-				opacity = 0x50000000
+				alpha = 0xFF000000
 			end
-			color = opacity + color*0x10000 + color*0x100 + color
+			color = alpha + color*0x10000 + color*0x100 + color
 			gui.rectangle(
                 math.floor(cell.x-5),
                 math.floor(cell.y-5),
@@ -1072,19 +1073,19 @@ function displayGenome(genome)
 		end
 	end
 	for _,gene in pairs(genome.genes) do
-		if gene.enabled then
+		if true then
 			local c1 = cells[gene.into]
 			local c2 = cells[gene.out]
-			local opacity = 0xA0000000
+			local alpha = 0x20000000
 			if c1.value == 0 then
-				opacity = 0x20000000
+				alpha = 0xA0000000
 			end
 			
 			local color = 0x80-math.floor(math.abs(mathFunctions.sigmoid(gene.weight))*0x80)
 			if gene.weight > 0 then 
-				color = opacity + 0x8000 + 0x10000*color
+				color = alpha + 0x8000 + 0x10000*color
 			else
-				color = opacity + 0x800000 + 0x100*color
+				color = alpha + 0x800000 + 0x100*color
 			end
 			gui.line(
                 math.floor(c1.x+1), 
@@ -1102,7 +1103,7 @@ function displayGenome(genome)
         2,
         7,
         0x00000000,
-        0x80FF0000
+        0x00FF0000
     )
 
     local pos = 100
@@ -1111,10 +1112,7 @@ function displayGenome(genome)
 
         pos = pos + 14
     end
-
-    local bitmap = netPicture:render()
-    form:set()
-    bitmap:draw(5, 250)
+	netPicture = genomeCtx:render()
     gui.renderctx.setnull()
 end
 
@@ -1236,8 +1234,6 @@ function playTop()
 end
 
 function on_quit()
-    netPicture:clear()
-    form:clear()
 end
 
 if pool == nil then
