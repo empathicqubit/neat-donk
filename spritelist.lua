@@ -125,13 +125,13 @@ _M.ExtBadSprites = {
 }
 
 function _M.InitExtSpriteList()
-    for i=1,#_M.GoodSprites,1 do
+    for i=1,#_M.ExtGoodSprites,1 do
         _M.extSprites[_M.ExtGoodSprites[i]] = 1
     end
-    for i=1,#_M.BadSprites,1 do
+    for i=1,#_M.ExtBadSprites,1 do
         _M.extSprites[_M.ExtBadSprites[i]] = -1
     end
-    for i=1,#_M.NeutralSprites,1 do
+    for i=1,#_M.ExtNeutralSprites,1 do
         _M.extSprites[_M.ExtBadSprites[i]] = 0
     end
 end
