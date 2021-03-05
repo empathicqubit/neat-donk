@@ -758,13 +758,14 @@ function displayForm()
 	gui.renderctx.setnull()
 end
 
+frame = 0
 function on_paint()
+    frame = frame + 1
     gui.left_gap(500)
     gui.top_gap(0)
     gui.bottom_gap(0)
     gui.right_gap(0)
-    if genomeDisplay ~= nil and movie.currentframe() % 10 == 0 then
-        displayGenome(genomeDisplay)
+    if frame % 10 == 0 then
         displayForm()
     end
     gui.renderctx.setnull()
@@ -802,7 +803,9 @@ function mainLoop (species, genome)
         species = pool.species[pool.currentSpecies]
         genome = species.genomes[pool.currentGenome]
 
-        genomeDisplay = genome
+        if frame % 10 == 0 then
+            displayGenome(genome)
+        end
         
         if pool.currentFrame%5 == 0 then
             evaluateCurrent()
@@ -900,7 +903,9 @@ function mainLoop (species, genome)
             return
         end
 
-        advanceFrame(mainLoop)
+        advanceFrame(function()
+            mainLoop(species, genome)
+        end)
     end)
 
 end
