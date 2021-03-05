@@ -260,13 +260,13 @@ function _M.getInputs()
 			end
 			
 			for i = 1,#sprites do
-				distx = math.abs(sprites[i].x - (partyX+dx))
-				disty = math.abs(sprites[i].y - (partyY+dy))
-				if distx <= 8 and disty <= 8 then
+				distx = math.abs(sprites[i].x - (partyX+dx*TILE_SIZE))
+				disty = math.abs(sprites[i].y - (partyY+dy*TILE_SIZE))
+				if distx <= TILE_SIZE / 2 and disty <= TILE_SIZE / 2 then
 					inputs[#inputs] = sprites[i].good
 					
 					local dist = math.sqrt((distx * distx) + (disty * disty))
-					if dist > 8 then
+					if dist > TILE_SIZE / 2 then
 						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
 					end
 				end
