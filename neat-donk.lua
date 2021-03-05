@@ -735,6 +735,7 @@ end
 formCtx = gui.renderctx.new(500, 500)
 function displayForm()
 	formCtx:set()
+    formCtx:clear()
 	gui.rectangle(0, 0, 500, 500, 1, 0x00ffffff, 0x00000000)
 	gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
 
@@ -959,6 +960,7 @@ end
 genomeCtx = gui.renderctx.new(470, 200)
 function displayGenome(genome)
     genomeCtx:set()
+    genomeCtx:clear()
     gui.solidrectangle(0, 0, 470, 200, 0x00606060)
 	local network = genome.network
 	local cells = {}
