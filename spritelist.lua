@@ -85,20 +85,14 @@ _M.BadSprites = {
 }
 
 function _M.InitSpriteList()
-    local k = 1
-    local j = 1
-    for i=1, 256 do
-        local isGood = (k <= #_M.GoodSprites) and (_M.GoodSprites[k] == i - 1)
-        local isNeutral = (j <= #_M.NeutralSprites) and (_M.NeutralSprites[j] == i - 1)
-        if isGood then
-            k = k + 1
-            _M.Sprites[#_M.Sprites + 1] = 1
-        elseif isNeutral then
-            j = j + 1
-            _M.Sprites[#_M.Sprites + 1] = 0
-        else
-            _M.Sprites[#_M.Sprites + 1] = -1
-        end
+    for i=1,#_M.GoodSprites,1 do
+        _M.Sprites[_M.GoodSprites[i]] = 1
+    end
+    for i=1,#_M.BadSprites,1 do
+        _M.Sprites[_M.BadSprites[i]] = -1
+    end
+    for i=1,#_M.NeutralSprites,1 do
+        _M.Sprites[_M.BadSprites[i]] = 0
     end
 end
 
@@ -131,19 +125,14 @@ _M.ExtBadSprites = {
 }
 
 function _M.InitExtSpriteList()
-    local j = 1
-    for i=1, 21 do
-        local isExtNeutral = (j <= #_M.ExtNeutralSprites) and (_M.ExtNeutralSprites[j] == i - 1)
-        local isExtGood = (j <= #_M.ExtGoodSprites)
-        if isExtNeutral then
-            j = j + 1
-            _M.extSprites[#_M.extSprites + 1] = 0
-        elseif isExtGood then
-            j = j + 1
-            _M.extSprites[#_M.extSprites + 1] = 1
-        else
-            _M.extSprites[#_M.extSprites + 1] = -1
-        end
+    for i=1,#_M.GoodSprites,1 do
+        _M.extSprites[_M.ExtGoodSprites[i]] = 1
+    end
+    for i=1,#_M.BadSprites,1 do
+        _M.extSprites[_M.ExtBadSprites[i]] = -1
+    end
+    for i=1,#_M.NeutralSprites,1 do
+        _M.extSprites[_M.ExtBadSprites[i]] = 0
     end
 end
 

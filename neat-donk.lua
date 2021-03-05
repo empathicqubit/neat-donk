@@ -6,23 +6,14 @@ game = require "game"
 mathFunctions = require "mathFunctions"
 util = require "util"
 
-guiWidth, guiHeight = gui.resolution()
 form = nil
 netPicture = nil
 runInitialized = {}
 frameAdvanced = {}
 
---int forms.pictureBox(int formhandle, [int? x = null], [int? y = null], [int? width = null], [int? height = null]) 
-
---[[ startButton = forms.button(form, "Start", flipState, 155, 102)
-
-restartButton = forms.button(form, "Restart", initializePool, 155, 102)
-saveButton = forms.button(form, "Save", savePool, 5, 102)
-loadButton = forms.button(form, "Load", loadPool, 80, 102)
-playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
-
-saveLoadLabel = forms.label(form, "Save/Load:", 5, 129) ]]
-saveLoadFile = config.NeatConfig.Filename .. ".pool"
+saveLoadFile = config.NeatConfig.SaveFile
+statusLine = nil
+statusColor = 0x0000ff00
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
 
@@ -732,48 +723,6 @@ function on_input()
     end
 end
 
-formCtx = gui.renderctx.new(500, 500)
-function displayForm()
-	formCtx:set()
-    formCtx:clear()
-	gui.rectangle(0, 0, 500, 500, 1, 0x00ffffff, 0x00000000)
-	gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
-
-	--gui.text(5, 30, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
-	gui.text(5, 5, "Generation: " .. pool.generation)
-	gui.text(130, 5, "Species: " .. pool.currentSpecies)
-	gui.text(230, 5, "Genome: " .. pool.currentGenome)
-	gui.text(130, 30, "Max: " .. math.floor(pool.maxFitness))
-	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
-	gui.text(5, 65, "Bananas: " .. (game.getBananas() - startBananas))
-	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
-	gui.text(130, 80, "Lives: " .. Lives)
-	gui.text(230, 65, "Damage: " .. partyHitCounter)
-	gui.text(230, 80, "PowerUp: " .. powerUpCounter)
-
-	if netPicture ~= nil then
-		netPicture:draw(5, 200)
-	end
-    form = formCtx:render()
-	gui.renderctx.setnull()
-end
-
-frame = 0
-function on_paint()
-    frame = frame + 1
-    gui.left_gap(500)
-    gui.top_gap(0)
-    gui.bottom_gap(0)
-    gui.right_gap(0)
-    if frame % 10 == 0 then
-        displayForm()
-    end
-    gui.renderctx.setnull()
-    if form ~= nil then
-        form:draw(-500, 0)
-    end
-end
-
 function advanceFrame(after)
     table.insert(frameAdvanced, after)
     --exec("+advance-frame")
@@ -782,6 +731,9 @@ end
 function mainLoop (species, genome)
     advanceFrame(function()
         if not config.Running then
+            advanceFrame(function()
+                mainLoop(species, genome)
+            end)
             return
         end
 
@@ -849,7 +801,7 @@ function mainLoop (species, genome)
             end
         end
         
-        Lives = game.getLives()
+        local lives = game.getLives()
 
         timeout = timeout - 1
         
@@ -871,8 +823,8 @@ function mainLoop (species, genome)
         
             local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
 
-            if startLives < Lives then
-                local ExtraLiveBonus = (Lives - startLives)*1000
+            if startLives < lives then
+                local ExtraLiveBonus = (lives - startLives)*1000
                 fitness = fitness + ExtraLiveBonus
                 print("ExtraLiveBonus added " .. ExtraLiveBonus)
             end
@@ -962,6 +914,129 @@ function fitnessAlreadyMeasured()
 	local genome = species.genomes[pool.currentGenome]
 	
 	return genome.fitness ~= 0
+end
+
+function savePool()
+	local filename = saveLoadFile
+	writeFile(filename)
+    statusLine = "Saved!"
+    statusColor = 0x00009900
+end
+
+function mysplit(inputstr, sep)
+        if sep == nil then
+                sep = "%s"
+        end
+        local t={} ; i=1
+        for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+                t[i] = str
+                i = i + 1
+        end
+        return t
+end
+
+function loadFile(filename, after)
+		print("Loading pool from " .. filename)
+        local file = io.open(filename, "r")
+        if file == nil then
+            statusLine = "File could not be loaded"
+            statusColor = 0x00990000
+        end
+        pool = newPool()
+        pool.generation = file:read("*number")
+        pool.maxFitness = file:read("*number")
+        local numSpecies = file:read("*number")
+        for s=1,numSpecies do
+                local species = newSpecies()
+                table.insert(pool.species, species)
+                species.topFitness = file:read("*number")
+                species.staleness = file:read("*number")
+                local numGenomes = file:read("*number")
+                for g=1,numGenomes do
+                        local genome = newGenome()
+                        table.insert(species.genomes, genome)
+                        genome.fitness = file:read("*number")
+                        genome.maxneuron = file:read("*number")
+                        local line = file:read("*line")
+                        while line ~= "done" do
+
+                                genome.mutationRates[line] = file:read("*number")
+                                line = file:read("*line")
+                        end
+                        local numGenes = file:read("*number")
+                        for n=1,numGenes do
+
+                                local gene = newGene()
+                                local enabled
+								
+								local geneStr = file:read("*line")
+								local geneArr = mysplit(geneStr)
+								gene.into = tonumber(geneArr[1])
+								gene.out = tonumber(geneArr[2])
+								gene.weight = tonumber(geneArr[3])
+								gene.innovation = tonumber(geneArr[4])
+								enabled = tonumber(geneArr[5])
+
+
+                                if enabled == 0 then
+                                        gene.enabled = false
+                                else
+                                        gene.enabled = true
+                                end
+                                
+								table.insert(genome.genes, gene)
+                        end
+                end
+        end
+        file:close()
+        
+        while fitnessAlreadyMeasured() do
+                nextGenome()
+        end
+        initializeRun(function()
+            pool.currentFrame = pool.currentFrame + 1
+            statusLine = "Pool loaded."
+            statusColor = 0x0000ff00
+            after()
+        end)
+end
+
+function loadPool(after)
+	loadFile(saveLoadFile, after)
+end
+
+function playTop()
+	local maxfitness = 0
+	local maxs, maxg
+	for s,species in pairs(pool.species) do
+		for g,genome in pairs(species.genomes) do
+			if genome.fitness > maxfitness then
+				maxfitness = genome.fitness
+				maxs = s
+				maxg = g
+			end
+		end
+	end
+	
+	pool.currentSpecies = maxs
+	pool.currentGenome = maxg
+	pool.maxFitness = maxfitness
+	initializeRun(function()
+        pool.currentFrame = pool.currentFrame + 1
+    end)
+end
+
+function on_quit()
+end
+
+if pool == nil then
+	initializePool(function() 
+        writeFile(config.PoolDir.."temp.pool")
+        mainLoop()
+    end)
+else
+    writeFile(config.PoolDir.."temp.pool")
+    mainLoop()
 end
 
 genomeCtx = gui.renderctx.new(470, 200)
@@ -1125,133 +1200,102 @@ function displayGenome(genome)
     gui.renderctx.setnull()
 end
 
-function savePool()
-	local filename = saveLoadFile
-	print(filename)
-	writeFile(filename)
-end
+formCtx = nil
+function displayForm()
+	formCtx:set()
+    formCtx:clear()
+	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0x00000000)
+	gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
 
-function mysplit(inputstr, sep)
-        if sep == nil then
-                sep = "%s"
-        end
-        local t={} ; i=1
-        for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-                t[i] = str
-                i = i + 1
-        end
-        return t
-end
+	--gui.text(5, 30, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
+	gui.text(5, 5, "Generation: " .. pool.generation)
+	gui.text(130, 5, "Species: " .. pool.currentSpecies)
+	gui.text(230, 5, "Genome: " .. pool.currentGenome)
+	gui.text(130, 30, "Max: " .. math.floor(pool.maxFitness))
+	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
+	gui.text(5, 65, "Bananas: " .. (game.getBananas() - startBananas))
+	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
+	gui.text(130, 80, "Lives: " .. game.getLives())
+	gui.text(230, 65, "Damage: " .. partyHitCounter)
+	gui.text(230, 80, "PowerUp: " .. powerUpCounter)
 
-function loadFile(filename, after)
-		print("Loading pool from " .. filename)
-        local file = io.open(filename, "r")
-        pool = newPool()
-        pool.generation = file:read("*number")
-        pool.maxFitness = file:read("*number")
-        forms.settext(MaxLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
-        local numSpecies = file:read("*number")
-        for s=1,numSpecies do
-                local species = newSpecies()
-                table.insert(pool.species, species)
-                species.topFitness = file:read("*number")
-                species.staleness = file:read("*number")
-                local numGenomes = file:read("*number")
-                for g=1,numGenomes do
-                        local genome = newGenome()
-                        table.insert(species.genomes, genome)
-                        genome.fitness = file:read("*number")
-                        genome.maxneuron = file:read("*number")
-                        local line = file:read("*line")
-                        while line ~= "done" do
+    gui.rectangle(0, 100, 500, 50, 1, 0x000000000, 0x00990099)
+    gui.text(5, 129, "..."..config.NeatConfig.SaveFile:sub(#config.NeatConfig.SaveFile - 55))
+    local startStop = ""
+    if config.Running then
+        startStop = "Stop"
+    else
+        startStop = "Start"
+    end
+    gui.text(5, 102, "[1] "..startStop)
 
-                                genome.mutationRates[line] = file:read("*number")
-                                line = file:read("*line")
-                        end
-                        local numGenes = file:read("*number")
-                        for n=1,numGenes do
+    gui.text(130, 102, "[4] Play Top")
 
-                                local gene = newGene()
-                                local enabled
-								
-								local geneStr = file:read("*line")
-								local geneArr = mysplit(geneStr)
-								gene.into = tonumber(geneArr[1])
-								gene.out = tonumber(geneArr[2])
-								gene.weight = tonumber(geneArr[3])
-								gene.innovation = tonumber(geneArr[4])
-								enabled = tonumber(geneArr[5])
+    gui.text(240, 102, "[6] Save")
 
 
-                                if enabled == 0 then
-                                        gene.enabled = false
-                                else
-                                        gene.enabled = true
-                                end
-                                
-								table.insert(genome.genes, gene)
-                        end
-                end
-        end
-        file:close()
-        
-        while fitnessAlreadyMeasured() do
-                nextGenome()
-        end
-        initializeRun(function()
-            pool.currentFrame = pool.currentFrame + 1
-            print("Pool loaded.")
-            after()
-        end)
-end
+    gui.text(320, 102, "[8] Load")
+    gui.text(400, 102, "[9] Restart")
 
-function flipState()
-	if config.Running == true then
-		config.Running = false
-		forms.settext(startButton, "Start")
-	else
-		config.Running = true
-		forms.settext(startButton, "Stop")
+	if netPicture ~= nil then
+		netPicture:draw(5, 200)
 	end
-end
- 
-function loadPool(after)
-	filename = forms.openfile("DP1.state.pool",config.PoolDir) 
-	loadFile(filename, after)
+
+    if statusLine ~= nil then
+        gui.rectangle(0, guiHeight - 20, 500, 20, 1, 0x00000000, statusColor)
+        gui.text(0, guiHeight - 20, statusLine, 0x00000000)
+    end
+    form = formCtx:render()
+	gui.renderctx.setnull()
 end
 
-function playTop()
-	local maxfitness = 0
-	local maxs, maxg
-	for s,species in pairs(pool.species) do
-		for g,genome in pairs(species.genomes) do
-			if genome.fitness > maxfitness then
-				maxfitness = genome.fitness
-				maxs = s
-				maxg = g
-			end
-		end
-	end
-	
-	pool.currentSpecies = maxs
-	pool.currentGenome = maxg
-	pool.maxFitness = maxfitness
-	--forms.settext(MaxLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
-	initializeRun()
-	pool.currentFrame = pool.currentFrame + 1
-	return
+frame = 0
+function on_paint()
+    guiWidth, guiHeight = gui.resolution()
+    if formCtx == nil then
+        formCtx = gui.renderctx.new(500, guiHeight)
+    end
+    frame = frame + 1
+    gui.left_gap(500)
+    gui.top_gap(0)
+    gui.bottom_gap(0)
+    gui.right_gap(0)
+    if frame % 10 == 0 then
+        displayForm()
+    end
+    gui.renderctx.setnull()
+    if form ~= nil then
+        form:draw(-500, 0)
+    end
 end
 
-function on_quit()
+helddown = false
+function on_keyhook (key, state)
+    if not helddown and state.value == 1 then
+        if key == "1" then
+            helddown = true
+            config.Running = not config.Running
+        elseif key == "4" then
+            helddown = true
+            playTop()
+        elseif key == "6" then
+            helddown = true
+            savePool()
+        elseif key == "8" then
+            helddown = true
+            loadPool()
+        elseif key == "9" then
+            helddown = true
+            initializePool()
+        end
+    elseif state.value == 0 then
+        helddown = false
+    end
 end
 
-if pool == nil then
-	initializePool(function() 
-        writeFile(config.PoolDir.."temp.pool")
-        mainLoop()
-    end)
-else
-    writeFile(config.PoolDir.."temp.pool")
-    mainLoop()
-end
+input.keyhook("1", true)
+input.keyhook("4", true)
+input.keyhook("6", true)
+input.keyhook("8", true)
+input.keyhook("9", true)
 

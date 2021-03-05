@@ -16,6 +16,8 @@ _M.State = {
 	"PiratePanic.lsmv",
 }
 
+_M.Filename = _M.PoolDir .. _M.State[1]
+
 --[[
 	Start game with specific powerup.
 	0 = No powerup
@@ -28,7 +30,8 @@ _M.StartPowerup = 0
 
 _M.NeatConfig = {
 --Filename = "DP1.state",
-Filename = _M.PoolDir .. _M.State[1],
+SaveFile = _M.Filename .. ".pool",
+Filename = _M.Filename,
 Population = 300,
 DeltaDisjoint = 2.0,
 DeltaWeights = 0.4,

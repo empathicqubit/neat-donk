@@ -206,7 +206,7 @@ function _M.getExtendedSprites()
     for idx=0,0x200/4-1,1 do
         local twoBits = bit.band(bit.lrshift(oam[0x201 + math.floor(idx / 4)], ((idx % 4) * 2)), 0x03)
         local flags = oam[idx * 4 + 4]
-        if bit.band(screenSprite.flags, 0x21) == 0x00 then
+        if bit.band(flags, 0x21) == 0x00 then
             goto continue
         end
         local tile = oam[idx * 4 + 3]
@@ -216,6 +216,10 @@ function _M.getExtendedSprites()
             y = oam[idx * 4 + 2],
             good = spritelist.extSprites[tile]
         }
+
+        if screenSprite.good == nil then
+            screenSprite.good = 0
+        end
 
         -- Hide the interface icons
         if screenSprite.x < 0 or screenSprite.y < TILE_SIZE then
@@ -232,7 +236,7 @@ function _M.getExtendedSprites()
             ::nextsprite::
         end
 
-        extended[#ext+1] = screenSprite
+        extended[#extended+1] = screenSprite
         ::continue::
     end
 		
@@ -243,8 +247,8 @@ callcount = 0
 function _M.getInputs()
 	_M.getPositions()
 	
-	sprites = _M.getSprites()
-	-- extended = _M.getExtendedSprites()
+	local sprites = _M.getSprites()
+	local extended = _M.getExtendedSprites()
 	
 	local inputs = {}
 	local inputDeltaDistance = {}
@@ -272,26 +276,19 @@ function _M.getInputs()
 				end
 			end
 
---[[ 			for i = 1,#extended do
-				distx = math.abs(extended[i]["x"] - (partyX+dx))
-				disty = math.abs(extended[i]["y"] - (partyY+dy))
-				if distx < 8 and disty < 8 then
+ 			for i = 1,#extended do
+				distx = math.abs(extended[i]["x"] - (partyX+dx*TILE_SIZE))
+				disty = math.abs(extended[i]["y"] - (partyY+dy*TILE_SIZE))
+				if distx < TILE_SIZE / 2 and disty < TILE_SIZE / 2 then
 					
 					--print(screenX .. "," .. screenY .. " to " .. extended[i]["x"]-layer1x .. "," .. extended[i]["y"]-layer1y) 
 					inputs[#inputs] = extended[i]["good"]
 					local dist = math.sqrt((distx * distx) + (disty * disty))
-					if dist > 8 then
+					if dist > TILE_SIZE / 2 then
 						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
-						--gui.drawLine(screenX, screenY, extended[i]["x"] - layer1x, extended[i]["y"] - layer1y, 0x50000000)
 					end
-					--if dist > 100 then
-						--dw = mathFunctions.squashDistance(dist)
-						--print(dist .. " to " .. dw)
-						--gui.drawLine(screenX, screenY, extended[i]["x"] - layer1x, extended[i]["y"] - layer1y, 0x50000000)
-					--end
-					--inputs[#inputs] = {["value"]=-1, ["dw"]=dw}
 				end
-			end ]]
+			end
 		end
 	end
 	
