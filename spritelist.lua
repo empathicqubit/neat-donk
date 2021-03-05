@@ -92,7 +92,7 @@ function _M.InitSpriteList()
         _M.Sprites[_M.BadSprites[i]] = -1
     end
     for i=1,#_M.NeutralSprites,1 do
-        _M.Sprites[_M.BadSprites[i]] = 0
+        _M.Sprites[_M.NeutralSprites[i]] = 0
     end
 end
 
@@ -132,7 +132,7 @@ function _M.InitExtSpriteList()
         _M.extSprites[_M.ExtBadSprites[i]] = -1
     end
     for i=1,#_M.ExtNeutralSprites,1 do
-        _M.extSprites[_M.ExtBadSprites[i]] = 0
+        _M.extSprites[_M.ExtNeutralSprites[i]] = 0
     end
 end
 
