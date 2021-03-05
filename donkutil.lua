@@ -276,7 +276,7 @@ Tile offset: %04x
         if detailsidx == idx then
             sprcolor = 0x00ff0000
         end
-        gui.text(sprite.screenX * 2, sprite.screenY * 2, sprite.control..","..sprite.animnum..","..sprite.attr, FG_COLOR, sprcolor)
+        gui.text(sprite.screenX * 2, sprite.screenY * 2, string.format("%04x, %04x, %04x", sprite.control, sprite.animnum, sprite.attr), FG_COLOR, sprcolor)
 
         local filename = os.getenv("HOME").."/neat-donk/catchem/"..sprite.animnum..","..sprite.attr..".png"
         if pokemon and spriteScreenX > (guiWidth / 4) and spriteScreenX < (guiWidth / 4) * 3 and spriteScreenY > (guiHeight / 3) and spriteScreenY < guiHeight and not util.file_exists(filename) then

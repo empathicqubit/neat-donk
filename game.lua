@@ -4,7 +4,9 @@ spritelist = require "spritelist"
 local _M = {}
 
 TILE_SIZE = 32
+ENEMY_SIZE = 64
 TILE_COLLISION_MATH_POINTER = 0x7e17b2
+SPRITE_BASE = 0x7e0de2
 VERTICAL_POINTER = 0xc414
 TILEDATA_POINTER = 0x7e0098
 CAMERA_X = 0x7e17ba
@@ -19,8 +21,8 @@ function _M.getPositions()
 	partyX = memory.readword(PARTY_X)
 	partyY = memory.readword(PARTY_Y)
 		
-	local cameraX = memory.readword(CAMERA_X) - 256
-	local cameraY = memory.readword(CAMERA_Y) - 256
+	cameraX = memory.readword(CAMERA_X) - 256
+	cameraY = memory.readword(CAMERA_Y) - 256
 		
 	_M.screenX = (partyX-256-cameraX)*2
 	_M.screenY = (partyY-256-cameraY)*2
@@ -165,29 +167,74 @@ function _M.getTile(dx, dy)
 end
 
 function _M.getSprites()
-	local sprites = {}
-	for slot=0,11 do
-		local status = memory.readbyte(0x14C8+slot)
-		if status ~= 0 then
-			spritex = memory.readbyte(0xE4+slot) + memory.readbyte(0x14E0+slot)*256
-			spritey = memory.readbyte(0xD8+slot) + memory.readbyte(0x14D4+slot)*256
-			sprites[#sprites+1] = {["x"]=spritex, ["y"]=spritey, ["good"] = spritelist.Sprites[memory.readbyte(0x009e + slot) + 1]}
-		end
-	end		
+    local sprites = {}
+    for idx = 2,22,1 do
+        local base_addr = idx * 94 + SPRITE_BASE
+
+        local control = memory.readword(base_addr)
+        if control == 0 then
+            goto continue
+        end
+        local x = memory.readword(base_addr + 0x06)
+        local y = memory.readword(base_addr + 0x0a)
+        local sprite = {
+            screenX = x - 256 - cameraX,
+            screenY = y - 256 - cameraY,
+            x = x,
+            y = y,
+            good = spritelist.Sprites[control]
+        }
+
+        if sprite.good == nil then
+            sprite.good = -1
+        end
+
+        sprites[#sprites+1] = sprite
+        ::continue::
+    end
 		
 	return sprites
 end
 
+-- Currently only for single bananas since they don't
+-- count as regular computed sprites
 function _M.getExtendedSprites()
-	local extended = {}
-	for slot=0,11 do
-		local number = memory.readbyte(0x170B+slot)
-		if number ~= 0 then
-			spritex = memory.readbyte(0x171F+slot) + memory.readbyte(0x1733+slot)*256
-			spritey = memory.readbyte(0x1715+slot) + memory.readbyte(0x1729+slot)*256
-			extended[#extended+1] = {["x"]=spritex, ["y"]=spritey, ["good"]  =  spritelist.extSprites[memory.readbyte(0x170B + slot) + 1]}
-		end
-	end		
+    local oam = memory2.OAM:readregion(0x00, 0x220)
+    local sprites = _M.getSprites()
+    local extended = {}
+
+    for idx=0,0x200/4-1,1 do
+        local twoBits = bit.band(bit.lrshift(oam[0x201 + math.floor(idx / 4)], ((idx % 4) * 2)), 0x03)
+        local flags = oam[idx * 4 + 4]
+        if bit.band(screenSprite.flags, 0x21) == 0x00 then
+            goto continue
+        end
+        local tile = oam[idx * 4 + 3]
+
+        local screenSprite = {
+            x = math.floor(oam[idx * 4 + 1] * ((-1) ^ bit.band(twoBits, 0x01))),
+            y = oam[idx * 4 + 2],
+            good = spritelist.extSprites[tile]
+        }
+
+        -- Hide the interface icons
+        if screenSprite.x < 0 or screenSprite.y < TILE_SIZE then
+            goto continue
+        end
+
+        -- Hide sprites near computed sprites
+        for s=1,#sprites,1 do
+            local sprite = sprites[s]
+            if screenSprite.x > sprite.screenX - ENEMY_SIZE and screenSprite.x < sprite.screenX + ENEMY_SIZE / 2 and
+                screenSprite.y > sprite.screenY - ENEMY_SIZE and screenSprite.y < sprite.screenY then
+                goto continue
+            end
+            ::nextsprite::
+        end
+
+        extended[#ext+1] = screenSprite
+        ::continue::
+    end
 		
 	return extended
 end
@@ -196,7 +243,7 @@ callcount = 0
 function _M.getInputs()
 	_M.getPositions()
 	
-	-- sprites = _M.getSprites()
+	sprites = _M.getSprites()
 	-- extended = _M.getExtendedSprites()
 	
 	local inputs = {}
@@ -212,19 +259,18 @@ function _M.getInputs()
 				inputs[#inputs] = 1
 			end
 			
---[[ 			for i = 1,#sprites do
-				distx = math.abs(sprites[i]["x"] - (partyX+dx))
-				disty = math.abs(sprites[i]["y"] - (partyY+dy))
+			for i = 1,#sprites do
+				distx = math.abs(sprites[i].x - (partyX+dx))
+				disty = math.abs(sprites[i].y - (partyY+dy))
 				if distx <= 8 and disty <= 8 then
-					inputs[#inputs] = sprites[i]["good"]
+					inputs[#inputs] = sprites[i].good
 					
 					local dist = math.sqrt((distx * distx) + (disty * disty))
 					if dist > 8 then
 						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
-						--gui.drawLine(screenX, screenY, sprites[i]["x"] - layer1x, sprites[i]["y"] - layer1y, 0x50000000)
 					end
 				end
-			end ]]
+			end
 
 --[[ 			for i = 1,#extended do
 				distx = math.abs(extended[i]["x"] - (partyX+dx))

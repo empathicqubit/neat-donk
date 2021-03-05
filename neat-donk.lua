@@ -693,7 +693,7 @@ function on_video()
 end
 
 function initializeRun(after)
-    settings.set_speed(1)
+    settings.set_speed(10)
     gui.subframe_update(false)
     table.insert(runInitialized, after)
     movie.unsafe_rewind(rew)
@@ -817,6 +817,8 @@ function mainLoop (species, genome)
         end
 
         game.getPositions()
+        -- FIXME Measure distance to target / area exit
+        -- We might not always be horizontal
         if partyX > rightmost then
             rightmost = partyX
             timeout = config.NeatConfig.TimeoutConstant
