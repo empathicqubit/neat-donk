@@ -654,6 +654,7 @@ function on_timer()
         game.writePowerup(config.StartPowerup)
     end
     rightmost = 0
+    upmost = 0
     pool.currentFrame = 0
     timeout = config.NeatConfig.TimeoutConstant
     game.clearJoypad()
@@ -684,7 +685,7 @@ function on_video()
 end
 
 function initializeRun(after)
-    settings.set_speed(10)
+    settings.set_speed("turbo")
     gui.subframe_update(false)
     table.insert(runInitialized, after)
     movie.unsafe_rewind(rew)
@@ -756,7 +757,11 @@ function mainLoop (species, genome)
         genome = species.genomes[pool.currentGenome]
 
         if frame % 10 == 0 then
-            displayGenome(genome)
+            if not pcall(function()
+                displayGenome(genome)
+            end) then
+            print("Could not render genome graph")
+            end
         end
         
         if pool.currentFrame%5 == 0 then
@@ -772,12 +777,19 @@ function mainLoop (species, genome)
         end
 
         game.getPositions()
+        if not vertical then
+            if partyX > rightmost then
+                rightmost = partyX
+                timeout = config.NeatConfig.TimeoutConstant
+            end
+        else
+            if partyY > upmost then
+                upmost = partyY
+                timeout = config.NeatConfig.TimeoutConstant * 10
+            end
+        end
         -- FIXME Measure distance to target / area exit
         -- We might not always be horizontal
-        if partyX > rightmost then
-            rightmost = partyX
-            timeout = config.NeatConfig.TimeoutConstant
-        end
         
         local hitTimer = game.getHitTimer()
         
@@ -820,8 +832,16 @@ function mainLoop (species, genome)
             
             local hitPenalty = partyHitCounter * 100
             local powerUpBonus = powerUpCounter * 100
+
+            local most = 0
+            if not vertical then
+                most = rightmost - pool.currentFrame / 2
+            else
+                most = upmost - pool.currentFrame / 2
+            end
+
         
-            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most
 
             if startLives < lives then
                 local ExtraLiveBonus = (lives - startLives)*1000
@@ -829,6 +849,7 @@ function mainLoop (species, genome)
                 print("ExtraLiveBonus added " .. ExtraLiveBonus)
             end
 
+            -- FIXME sus
             if rightmost > 4816 then
                 fitness = fitness + 1000
                 print("!!!!!!Beat level!!!!!!!")
