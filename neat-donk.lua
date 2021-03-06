@@ -3,6 +3,7 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 
 local json = dofile(base.."/dkjson.lua")
+local libDeflate = dofile(base.."/LibDeflate.lua")
 local config = dofile(base.."/config.lua")
 local spritelist = dofile(base.."/spritelist.lua")
 local game = dofile(base.."/game.lua")
@@ -906,9 +907,22 @@ function mainLoop (species, genome)
     end)
 end
 
+function bytes(x)
+    local b4=x%256  x=(x-x%256)/256
+    local b3=x%256  x=(x-x%256)/256
+    local b2=x%256  x=(x-x%256)/256
+    local b1=x%256  x=(x-x%256)/256
+    return string.char(b1,b2,b3,b4)
+end
+
 function writeFile(filename)
     local file = io.open(filename, "w")
-    file:write(json.encode(pool))
+    local json = json.encode(pool)
+    local zlib = libDeflate:CompressDeflate(json)
+    file:write("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x00")
+    file:write(zlib)
+    file:write(string.char(0,0,0,0))
+    file:write(bytes(#json % (2^32)))
     file:close()
     return
 end
@@ -960,7 +974,7 @@ function loadFile(filename, after)
             return
         end
         local contents = file:read("*all")
-        local obj, pos, err = json.decode(contents)
+        local obj, pos, err = json.decode(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
         if err ~= nil then
             statusLine = string.format("Error parsing: %s", err)
             statusColor = 0x00990000
