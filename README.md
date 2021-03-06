@@ -24,3 +24,7 @@ An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 
 ## Notes
 Only tested on Pirate Panic
+
+## Credits
+
+A lot of basic info came from [Donkey Hacks](http://donkeyhacks.zouri.jp/html/En-Us/dkc2/index.html), the NEAT A/I comes from [SethBling's Mar I/O](https://github.com/mam91/neat-genetic-mario), and basic information about the tilemap came from [p4plus2/DKC2-disassembly](https://github.com/p4plus2/DKC2-disassembly)

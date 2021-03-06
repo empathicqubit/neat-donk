@@ -778,15 +778,30 @@ function mainLoop (species, genome)
         end
 
         game.getPositions()
+        local timeoutConst = 0
+        if vertical then
+            timeoutConst = config.NeatConfig.TimeoutConstant * 10
+        else
+            timeoutConst = config.NeatConfig.TimeoutConstant
+        end
+
+        -- Don't punish being launched by barrels
+        -- FIXME Will this skew mine cart levels?
+        if math.abs(game.getVelocityY()) > 0x1800 or math.abs(game.getVelocityX()) > 0x1800 then
+            statusLine = "Barrel launch!!!"
+            statusColor = 0x0000ff00
+            timeout = timeoutConst
+        end
+
         if not vertical then
             if partyX > rightmost then
                 rightmost = partyX
-                timeout = config.NeatConfig.TimeoutConstant
+                timeout = timeoutConst
             end
         else
             if partyY > upmost then
                 upmost = partyY
-                timeout = config.NeatConfig.TimeoutConstant * 10
+                timeout = timeoutConst
             end
         end
         -- FIXME Measure distance to target / area exit

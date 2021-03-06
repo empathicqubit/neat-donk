@@ -24,6 +24,7 @@ MATH_LIVES = 0x7e08be
 DISPLAY_LIVES = 0x7e0c0
 
 function _M.getPositions()
+    leader = memory.readword(LEAD_CHAR)
     tilePtr = memory.readhword(TILEDATA_POINTER)
     vertical = memory.readword(TILE_COLLISION_MATH_POINTER) == VERTICAL_POINTER
 	partyX = memory.readword(PARTY_X)
@@ -65,6 +66,16 @@ function _M.getBoth()
     -- FIXME consider invincibility barrels
     local both = memory.readword(HAVE_BOTH)
 	return bit.band(both, 0x4000)
+end
+
+function _M.getVelocityY()
+    local sprite = _M.getSprite(leader)
+    return sprite.velocityY
+end
+
+function _M.getVelocityX()
+    local sprite = _M.getSprite(leader)
+    return sprite.velocityX
 end
 
 function _M.writePowerup(powerup)
@@ -183,7 +194,6 @@ function _M.getTile(dx, dy)
 end
 
 function _M.getJumpHeight()
-    local leader = memory.readword(LEAD_CHAR)
     local sprite = _M.getSprite(leader)
     return sprite.jumpHeight
 end
@@ -204,6 +214,8 @@ function _M.getSprite(idx)
         screenX = x - 256 - cameraX - 256,
         screenY = y - 256 - cameraY - 256,
         jumpHeight = memory.readword(base_addr + 0x0e),
+        velocityX = memory.readsword(base_addr + 0x20),
+        velocityY = memory.readsword(base_addr + 0x24),
         x = x,
         y = y,
         good = spritelist.Sprites[control]
