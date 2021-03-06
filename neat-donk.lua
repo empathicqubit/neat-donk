@@ -838,7 +838,7 @@ function mainLoop (species, genome)
             end
 
         
-            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight()
+            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
 
             if startLives < lives then
                 local ExtraLiveBonus = (lives - startLives)*1000
