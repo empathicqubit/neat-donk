@@ -15,6 +15,7 @@ TILEDATA_POINTER = 0x7e0098
 HAVE_BOTH = 0x7e08c2
 CAMERA_X = 0x7e17ba
 CAMERA_Y = 0x7e17c0
+LEAD_CHAR = 0x7e08a4
 PARTY_X = 0x7e0a2a
 PARTY_Y = 0x7e0a2c
 SOLID_LESS_THAN = 0x7e00a0
@@ -62,7 +63,8 @@ end
 
 function _M.getBoth()
     -- FIXME consider invincibility barrels
-	return bit.band(memory.readword(HAVE_BOTH), 0x40)
+    local both = memory.readword(HAVE_BOTH)
+	return bit.band(both, 0x4000)
 end
 
 function _M.writePowerup(powerup)
@@ -180,27 +182,46 @@ function _M.getTile(dx, dy)
     return 1
 end
 
+function _M.getJumpHeight()
+    local leader = memory.readword(LEAD_CHAR)
+    local sprite = _M.getSprite(leader)
+    return sprite.jumpHeight
+end
+
+function _M.getSprite(idx)
+    local base_addr = idx * 94 + SPRITE_BASE
+
+    local control = memory.readword(base_addr)
+
+    if control == 0 then
+        return nil
+    end
+
+    local x = memory.readword(base_addr + 0x06)
+    local y = memory.readword(base_addr + 0x0a)
+    local sprite = {
+        control = control,
+        screenX = x - 256 - cameraX - 256,
+        screenY = y - 256 - cameraY - 256,
+        jumpHeight = memory.readword(base_addr + 0x0e),
+        x = x,
+        y = y,
+        good = spritelist.Sprites[control]
+    }
+
+    if sprite.good == nil then
+        sprite.good = -1
+    end
+
+    return sprite
+end
+
 function _M.getSprites()
     local sprites = {}
     for idx = 2,22,1 do
-        local base_addr = idx * 94 + SPRITE_BASE
-
-        local control = memory.readword(base_addr)
-        if control == 0 then
+        local sprite = _M.getSprite(idx)
+        if sprite == nil then
             goto continue
-        end
-        local x = memory.readword(base_addr + 0x06)
-        local y = memory.readword(base_addr + 0x0a)
-        local sprite = {
-            screenX = x - 256 - cameraX - 256,
-            screenY = y - 256 - cameraY - 256,
-            x = x,
-            y = y,
-            good = spritelist.Sprites[control]
-        }
-
-        if sprite.good == nil then
-            sprite.good = -1
         end
 
         sprites[#sprites+1] = sprite
@@ -272,8 +293,14 @@ function _M.getInputs()
 			inputDeltaDistance[#inputDeltaDistance+1] = 1
 			
 			tile = _M.getTile(dx, dy)
-			if tile == 1 --[[and partyY+dy < 0x1B0]] then
-				inputs[#inputs] = 1
+			if tile == 1 then
+                if _M.getTile(dx, dy-1) == 1 then
+                    inputs[#inputs] = -1
+                else
+                    inputs[#inputs] = 1
+                end
+            elseif tile == 0 and _M.getTile(dx + 1, dy) == 1 and _M.getTile(dx + 1, dy - 1) == 1 then
+                inputs[#inputs] = -1
 			end
 			
 			for i = 1,#sprites do

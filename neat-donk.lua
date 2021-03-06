@@ -9,6 +9,7 @@ mathFunctions = dofile(base.."/mathFunctions.lua")
 util = dofile(base.."/util.lua")
 
 kong = 0
+lastBoth = 0
 form = nil
 netPicture = nil
 runInitialized = {}
@@ -734,9 +735,7 @@ end
 function mainLoop (species, genome)
     advanceFrame(function()
         if not config.Running then
-            advanceFrame(function()
-                mainLoop(species, genome)
-            end)
+            mainLoop(species, genome)
             return
         end
 
@@ -793,7 +792,7 @@ function mainLoop (species, genome)
         -- FIXME Measure distance to target / area exit
         -- We might not always be horizontal
         
-        local hitTimer = game.getHitTimer(powerUpBefore)
+        local hitTimer = game.getHitTimer(lastBoth)
         
         if hitTimer > 0 then
             partyHitCounter = partyHitCounter + 1
@@ -801,6 +800,7 @@ function mainLoop (species, genome)
         end
         
         powerUp = game.getBoth()
+        lastBoth = powerUp
         if powerUp > 0 then
             if powerUp ~= powerUpBefore then
                 powerUpCounter = powerUpCounter+1
@@ -838,7 +838,7 @@ function mainLoop (species, genome)
             end
 
         
-            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most
+            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight()
 
             if startLives < lives then
                 local ExtraLiveBonus = (lives - startLives)*1000
@@ -873,11 +873,8 @@ function mainLoop (species, genome)
             return
         end
 
-        advanceFrame(function()
-            mainLoop(species, genome)
-        end)
+        mainLoop(species, genome)
     end)
-
 end
 
 function writeFile(filename)
