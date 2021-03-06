@@ -20,7 +20,7 @@ function _M.table_to_string(tbl)
 
         -- Check the value type
         if type(v) == "table" then
-            result = result..table_to_string(v)
+            result = result.._M.table_to_string(v)
         elseif type(v) == "boolean" then
             result = result..tostring(v)
         elseif type(v) == "number" and v >= 0 then

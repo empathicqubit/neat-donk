@@ -3,6 +3,7 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 
 config = dofile(base.."/config.lua")
 spritelist = dofile(base.."/spritelist.lua")
+util = dofile(base.."/util.lua")
 local _M = {}
 
 TILE_SIZE = 32
@@ -24,8 +25,8 @@ function _M.getPositions()
 	partyX = memory.readword(PARTY_X)
 	partyY = memory.readword(PARTY_Y)
 		
-	cameraX = memory.readword(CAMERA_X) - 256
-	cameraY = memory.readword(CAMERA_Y) - 256
+	cameraX = memory.readword(CAMERA_X)
+	cameraY = memory.readword(CAMERA_Y)
 		
 	_M.screenX = (partyX-256-cameraX)*2
 	_M.screenY = (partyY-256-cameraY)*2
@@ -182,8 +183,8 @@ function _M.getSprites()
         local x = memory.readword(base_addr + 0x06)
         local y = memory.readword(base_addr + 0x0a)
         local sprite = {
-            screenX = x - 256 - cameraX,
-            screenY = y - 256 - cameraY,
+            screenX = x - 256 - cameraX - 256,
+            screenY = y - 256 - cameraY - 256,
             x = x,
             y = y,
             good = spritelist.Sprites[control]
@@ -210,16 +211,15 @@ function _M.getExtendedSprites()
     for idx=0,0x200/4-1,1 do
         local twoBits = bit.band(bit.lrshift(oam[0x201 + math.floor(idx / 4)], ((idx % 4) * 2)), 0x03)
         local flags = oam[idx * 4 + 4]
-        if bit.band(flags, 0x21) == 0x00 then
-            goto continue
-        end
         local tile = oam[idx * 4 + 3]
-
         local screenSprite = {
             x = math.floor(oam[idx * 4 + 1] * ((-1) ^ bit.band(twoBits, 0x01))),
             y = oam[idx * 4 + 2],
             good = spritelist.extSprites[tile]
         }
+        if bit.band(flags, 0x21) == 0x00 then
+            goto continue
+        end
 
         if screenSprite.good == nil then
             screenSprite.good = 0
@@ -229,6 +229,8 @@ function _M.getExtendedSprites()
         if screenSprite.x < 0 or screenSprite.y < TILE_SIZE then
             goto continue
         end
+
+        print(screenSprite)
 
         -- Hide sprites near computed sprites
         for s=1,#sprites,1 do
@@ -243,6 +245,8 @@ function _M.getExtendedSprites()
         extended[#extended+1] = screenSprite
         ::continue::
     end
+
+    print(util.table_to_string(extended))
 		
 	return extended
 end
@@ -281,8 +285,8 @@ function _M.getInputs()
 			end
 
  			for i = 1,#extended do
-				distx = math.abs(extended[i]["x"] - (partyX+dx*TILE_SIZE))
-				disty = math.abs(extended[i]["y"] - (partyY+dy*TILE_SIZE))
+				distx = math.abs(extended[i]["x"]+cameraX - (partyX+dx*TILE_SIZE))
+				disty = math.abs(extended[i]["y"]+cameraY - (partyY+dy*TILE_SIZE))
 				if distx < TILE_SIZE / 2 and disty < TILE_SIZE / 2 then
 					
 					--print(screenX .. "," .. screenY .. " to " .. extended[i]["x"]-layer1x .. "," .. extended[i]["y"]-layer1y) 
