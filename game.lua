@@ -230,8 +230,6 @@ function _M.getExtendedSprites()
             goto continue
         end
 
-        print(screenSprite)
-
         -- Hide sprites near computed sprites
         for s=1,#sprites,1 do
             local sprite = sprites[s]
@@ -246,8 +244,6 @@ function _M.getExtendedSprites()
         ::continue::
     end
 
-    print(util.table_to_string(extended))
-		
 	return extended
 end
 
@@ -289,7 +285,6 @@ function _M.getInputs()
 				disty = math.abs(extended[i]["y"]+cameraY - (partyY+dy*TILE_SIZE))
 				if distx < TILE_SIZE / 2 and disty < TILE_SIZE / 2 then
 					
-					--print(screenX .. "," .. screenY .. " to " .. extended[i]["x"]-layer1x .. "," .. extended[i]["y"]-layer1y) 
 					inputs[#inputs] = extended[i]["good"]
 					local dist = math.sqrt((distx * distx) + (disty * disty))
 					if dist > TILE_SIZE / 2 then
