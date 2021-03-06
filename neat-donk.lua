@@ -8,6 +8,7 @@ game = dofile(base.."/game.lua")
 mathFunctions = dofile(base.."/mathFunctions.lua")
 util = dofile(base.."/util.lua")
 
+kong = 0
 form = nil
 netPicture = nil
 runInitialized = {}
@@ -663,10 +664,9 @@ function on_timer()
     startBananas = game.getBananas()
     startCoins = game.getCoins()
     startLives = game.getLives()
-    checkPartyCollision = true
     partyHitCounter = 0
     powerUpCounter = 0
-    powerUpBefore = game.getPowerup()
+    powerUpBefore = game.getBoth()
     local species = pool.species[pool.currentSpecies]
     local genome = species.genomes[pool.currentGenome]
     generateNetwork(genome)
@@ -793,27 +793,22 @@ function mainLoop (species, genome)
         -- FIXME Measure distance to target / area exit
         -- We might not always be horizontal
         
-        local hitTimer = game.getHitTimer()
+        local hitTimer = game.getHitTimer(powerUpBefore)
         
-        if checkPartyCollision == true then
-            if hitTimer > 0 then
-                partyHitCounter = partyHitCounter + 1
-                --print("party took damage, hit counter: " .. partyHitCounter)
-                checkPartyCollision = false
-            end
+        if hitTimer > 0 then
+            partyHitCounter = partyHitCounter + 1
+            --print("party took damage, hit counter: " .. partyHitCounter)
         end
         
-        if hitTimer == 0 then
-            checkPartyCollision = true
-        end
-        
-        powerUp = game.getPowerup()
+        powerUp = game.getBoth()
         if powerUp > 0 then
             if powerUp ~= powerUpBefore then
                 powerUpCounter = powerUpCounter+1
                 powerUpBefore = powerUp
             end
         end
+
+        kong = game.getKong()
         
         local lives = game.getLives()
 
@@ -825,11 +820,11 @@ function mainLoop (species, genome)
             local bananas = game.getBananas() - startBananas
             local coins = game.getCoins() - startCoins
             
-            print("Bananas: " .. bananas .. " coins: " .. coins)
+            print(string.format("Bananas: %d, coins: %d, KONG: %d", bananas, coins, kong))
 
-            local bananaCoinsFitness = (bananas * 50) + (coins * 0.2)
+            local bananaCoinsFitness = (kong * 60) + (bananas * 50) + (coins * 0.2)
             if (bananas + coins) > 0 then 
-                print("Bananas and Coins added " .. bananaCoinsFitness .. " fitness")
+                print("Bananas, Coins, KONG added " .. bananaCoinsFitness .. " fitness")
             end
             
             local hitPenalty = partyHitCounter * 100
@@ -1237,6 +1232,7 @@ function displayForm()
 	gui.text(130, 30, "Max: " .. math.floor(pool.maxFitness))
 	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
 	gui.text(5, 65, "Bananas: " .. (game.getBananas() - startBananas))
+	gui.text(5, 85, "KONG: " .. kong)
 	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
 	gui.text(130, 80, "Lives: " .. game.getLives())
 	gui.text(230, 65, "Damage: " .. partyHitCounter)

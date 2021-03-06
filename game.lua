@@ -18,6 +18,9 @@ CAMERA_Y = 0x7e17c0
 PARTY_X = 0x7e0a2a
 PARTY_Y = 0x7e0a2c
 SOLID_LESS_THAN = 0x7e00a0
+KONG_LETTERS = 0x7e0902
+MATH_LIVES = 0x7e08be
+DISPLAY_LIVES = 0x7e0c0
 
 function _M.getPositions()
     tilePtr = memory.readhword(TILEDATA_POINTER)
@@ -42,6 +45,11 @@ function _M.getCoins()
         return coins
 end
 
+function _M.getKong()
+    local kong = memory.readword(KONG_LETTERS)
+    return bit.popcount(kong)
+end
+
 function _M.getLives()
 	local lives = memory.readsbyte(0x7e08be) + 1
 	return lives
@@ -52,9 +60,9 @@ function _M.writeLives(lives)
 	memory.writebyte(0x7e08c0, lives - 1)
 end
 
-function _M.getPowerup()
+function _M.getBoth()
     -- FIXME consider invincibility barrels
-	return memory.readword(HAVE_BOTH)
+	return bit.band(memory.readword(HAVE_BOTH), 0x40)
 end
 
 function _M.writePowerup(powerup)
@@ -64,11 +72,12 @@ end
 
 
 function _M.getHit(alreadyHit)
-        return not alreadyHit and memory.readbyte(0x7e08be) < memory.readbyte(0x7e08c0)
+        return not alreadyHit and memory.readword(MATH_LIVES) < memory.readword(DISPLAY_LIVES)
 end
 
-function _M.getHitTimer()
-	return memory.readbyte(0x7e08c0) - memory.readbyte(0x7e08be)
+function _M.getHitTimer(lastBoth)
+	return (memory.readword(DISPLAY_LIVES) - memory.readword(MATH_LIVES))
+        + lastBoth - _M.getBoth()
 end
 
 -- Logic from 0xb5c3e1, 0xb5c414, 0xb5c82c
