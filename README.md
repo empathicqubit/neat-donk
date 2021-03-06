@@ -32,3 +32,4 @@ An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 * [SethBling's Mar I/O](https://github.com/mam91/neat-genetic-mario)
 * [Basic tilemap info from p4plus2/DKC2-disassembly](https://github.com/p4plus2/DKC2-disassembly)
 * [dkjson](http://dkolf.de/src/dkjson-lua.fsl/home)
+* [LibDeflate](https://github.com/SafeteeWoW/LibDeflate)

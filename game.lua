@@ -71,11 +71,17 @@ end
 
 function _M.getVelocityY()
     local sprite = _M.getSprite(leader)
+    if sprite == nil then
+        return 1900
+    end
     return sprite.velocityY
 end
 
 function _M.getVelocityX()
     local sprite = _M.getSprite(leader)
+    if sprite == nil then
+        return 1900
+    end
     return sprite.velocityX
 end
 

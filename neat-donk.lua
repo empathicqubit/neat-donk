@@ -802,10 +802,10 @@ function mainLoop (species, genome)
 
         -- Don't punish being launched by barrels
         -- FIXME Will this skew mine cart levels?
-        if math.abs(game.getVelocityY()) > 0x1800 or math.abs(game.getVelocityX()) > 0x1800 then
-            statusLine = "Barrel launch!!!"
+        if game.getVelocityY() < -1850 then
+            statusLine = string.format("Gotta go fast!!! %d", partyX)
             statusColor = 0x0000ff00
-            timeout = timeoutConst
+            timeout = timeoutConst + 60 * 2
         end
 
         if not vertical then
