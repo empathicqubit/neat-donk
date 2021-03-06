@@ -664,6 +664,7 @@ function on_timer()
     timeout = config.NeatConfig.TimeoutConstant
     game.clearJoypad()
     startBananas = game.getBananas()
+    startKrem = game.getKremCoins()
     startCoins = game.getCoins()
     startLives = game.getLives()
     partyHitCounter = 0
@@ -811,8 +812,6 @@ function mainLoop (species, genome)
         if nextArea ~= lastArea then
             lastArea = nextArea
             game.onceAreaLoaded(function()
-                statusLine = string.format("Area changed: %02x", currentArea)
-                statusColor = 0x00009900
                 timeout = timeoutConst + 60 * 2
                 currentArea = nextArea
                 lastArea = currentArea
@@ -864,10 +863,11 @@ function mainLoop (species, genome)
         
             local bananas = game.getBananas() - startBananas
             local coins = game.getCoins() - startCoins
+            local krem = game.getKremCoins() - startKrem
             
-            print(string.format("Bananas: %d, coins: %d, KONG: %d", bananas, coins, kong))
+            print(string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", bananas, coins, krem, kong))
 
-            local bananaCoinsFitness = (kong * 60) + (bananas * 50) + (coins * 0.2)
+            local bananaCoinsFitness = (krem * 100) + (kong * 60) + (bananas * 50) + (coins * 0.2)
             if (bananas + coins) > 0 then 
                 print("Bananas, Coins, KONG added " .. bananaCoinsFitness .. " fitness")
             end
@@ -1055,6 +1055,34 @@ else
     mainLoop()
 end
 
+buttons = nil
+buttonCtx = gui.renderctx.new(500, 50)
+function displayButtons()
+    buttonCtx:set()
+    buttonCtx:clear()
+
+    gui.rectangle(0, 0, 500, 50, 1, 0x000000000, 0x00990099)
+    gui.text(5, 29, "..."..config.NeatConfig.SaveFile:sub(#config.NeatConfig.SaveFile - 55))
+    local startStop = ""
+    if config.Running then
+        startStop = "Stop"
+    else
+        startStop = "Start"
+    end
+    gui.text(5, 2, "[1] "..startStop)
+
+    gui.text(130, 2, "[4] Play Top")
+
+    gui.text(240, 2, "[6] Save")
+
+
+    gui.text(320, 2, "[8] Load")
+    gui.text(400, 2, "[9] Restart")
+
+	buttons = buttonCtx:render()
+    gui.renderctx.setnull()
+end
+
 genomeCtx = gui.renderctx.new(470, 200)
 function displayGenome(genome)
     genomeCtx:set()
@@ -1230,7 +1258,8 @@ function displayForm()
 	gui.text(130, 30, "Max: " .. math.floor(pool.maxFitness))
 	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
 	gui.text(5, 65, "Bananas: " .. (game.getBananas() - startBananas))
-	gui.text(5, 85, "KONG: " .. kong)
+	gui.text(5, 80, "KONG: " .. kong)
+    gui.text(5, 95, "Krem: " .. (game.getKremCoins() - startKrem))
 	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
 	gui.text(130, 80, "Lives: " .. game.getLives())
 	gui.text(230, 65, "Damage: " .. partyHitCounter)
@@ -1238,23 +1267,9 @@ function displayForm()
 	gui.text(320, 65, string.format("Current Area: %04x", currentArea))
 	gui.text(320, 80, "Rightmost: "..rightmost[currentArea])
 
-    gui.rectangle(0, 100, 500, 50, 1, 0x000000000, 0x00990099)
-    gui.text(5, 129, "..."..config.NeatConfig.SaveFile:sub(#config.NeatConfig.SaveFile - 55))
-    local startStop = ""
-    if config.Running then
-        startStop = "Stop"
-    else
-        startStop = "Start"
-    end
-    gui.text(5, 102, "[1] "..startStop)
-
-    gui.text(130, 102, "[4] Play Top")
-
-    gui.text(240, 102, "[6] Save")
-
-
-    gui.text(320, 102, "[8] Load")
-    gui.text(400, 102, "[9] Restart")
+    displayButtons()
+    formCtx:set()
+    buttons:draw(5, 130)
 
 	if netPicture ~= nil then
 		netPicture:draw(5, 200)

@@ -7,6 +7,7 @@ local spritelist = dofile(base.."/spritelist.lua")
 local util = dofile(base.."/util.lua")
 local _M = {}
 
+KREMCOINS = 0x7e08cc
 TILE_SIZE = 32
 ENEMY_SIZE = 64
 TILE_COLLISION_MATH_POINTER = 0x7e17b2
@@ -48,6 +49,11 @@ end
 function _M.getCoins()
         local coins = memory.readword(0x7e08ca)
         return coins
+end
+
+function _M.getKremCoins()
+    local krem = memory.readword(KREMCOINS)
+    return krem
 end
 
 function _M.getKong()
