@@ -1,9 +1,11 @@
 local _M = {}
 
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+
 --[[
 	Change script dir to your script directory
 --]]
-_M.ScriptDir = "/media/removable/Main/user1000/neat-donk"
+_M.ScriptDir = base
 
 _M.StateDir = _M.ScriptDir .. "/state/"
 _M.PoolDir = _M.ScriptDir .. "/pool/"
