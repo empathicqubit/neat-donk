@@ -1,4 +1,6 @@
-util = require "util"
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+
+util = dofile(base.."/util.lua")
 
 FG_COLOR = 0x00ffffff
 BG_COLOR = 0x99000000

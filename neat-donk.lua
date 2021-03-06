@@ -1,10 +1,12 @@
 --Update to Seth-Bling's MarI/O app
 
-config = require "config"
-spritelist = require "spritelist"
-game = require "game"
-mathFunctions = require "mathFunctions"
-util = require "util"
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+
+config = dofile(base.."/config.lua")
+spritelist = dofile(base.."/spritelist.lua")
+game = dofile(base.."/game.lua")
+mathFunctions = dofile(base.."/mathFunctions.lua")
+util = dofile(base.."/util.lua")
 
 form = nil
 netPicture = nil

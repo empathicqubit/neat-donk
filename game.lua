@@ -1,6 +1,8 @@
 --Notes here
-config = require "config"
-spritelist = require "spritelist"
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+
+config = dofile(base.."/config.lua")
+spritelist = dofile(base.."/spritelist.lua")
 local _M = {}
 
 TILE_SIZE = 32
@@ -50,6 +52,7 @@ function _M.writeLives(lives)
 end
 
 function _M.getPowerup()
+    -- FIXME consider invincibility barrels
 	return memory.readword(HAVE_BOTH)
 end
 
