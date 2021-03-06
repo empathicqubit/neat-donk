@@ -2,12 +2,15 @@
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 
-config = dofile(base.."/config.lua")
-spritelist = dofile(base.."/spritelist.lua")
-game = dofile(base.."/game.lua")
-mathFunctions = dofile(base.."/mathFunctions.lua")
-util = dofile(base.."/util.lua")
+local json = dofile(base.."/dkjson.lua")
+local config = dofile(base.."/config.lua")
+local spritelist = dofile(base.."/spritelist.lua")
+local game = dofile(base.."/game.lua")
+local mathFunctions = dofile(base.."/mathFunctions.lua")
+local util = dofile(base.."/util.lua")
 
+loadRequested = false
+saveRequested = false
 kong = 0
 lastBoth = 0
 form = nil
@@ -734,6 +737,17 @@ end
 
 function mainLoop (species, genome)
     advanceFrame(function()
+        if loadRequested then
+            loadRequested = false
+            loadPool(mainLoop)
+            return
+        end
+
+        if saveRequested then
+            saveRequested = false
+            savePool()
+        end
+
         if not config.Running then
             mainLoop(species, genome)
             return
@@ -893,38 +907,10 @@ function mainLoop (species, genome)
 end
 
 function writeFile(filename)
-        local file = io.open(filename, "w")
-        file:write(pool.generation .. "\n")
-        file:write(pool.maxFitness .. "\n")
-        file:write(#pool.species .. "\n")
-        for n,species in pairs(pool.species) do
-                file:write(species.topFitness .. "\n")
-                file:write(species.staleness .. "\n")
-                file:write(#species.genomes .. "\n")
-                for m,genome in pairs(species.genomes) do
-                        file:write(genome.fitness .. "\n")
-                        file:write(genome.maxneuron .. "\n")
-                        for mutation,rate in pairs(genome.mutationRates) do
-                                file:write(mutation .. "\n")
-                                file:write(rate .. "\n")
-                        end
-                        file:write("done\n")
-                        
-                        file:write(#genome.genes .. "\n")
-                        for l,gene in pairs(genome.genes) do
-                                file:write(gene.into .. " ")
-                                file:write(gene.out .. " ")
-                                file:write(gene.weight .. " ")
-                                file:write(gene.innovation .. " ")
-                                if(gene.enabled) then
-                                        file:write("1\n")
-                                else
-                                        file:write("0\n")
-                                end
-                        end
-                end
-        end
-        file:close()
+    local file = io.open(filename, "w")
+    file:write(json.encode(pool))
+    file:close()
+    return
 end
 
 function nextGenome()
@@ -949,7 +935,7 @@ end
 function savePool()
 	local filename = saveLoadFile
 	writeFile(filename)
-    statusLine = "Saved!"
+    statusLine = string.format("Saved \"%s\"!", filename:sub(#filename - 50))
     statusColor = 0x00009900
 end
 
@@ -971,55 +957,18 @@ function loadFile(filename, after)
         if file == nil then
             statusLine = "File could not be loaded"
             statusColor = 0x00990000
+            return
         end
-        pool = newPool()
-        pool.generation = file:read("*number")
-        pool.maxFitness = file:read("*number")
-        local numSpecies = file:read("*number")
-        for s=1,numSpecies do
-                local species = newSpecies()
-                table.insert(pool.species, species)
-                species.topFitness = file:read("*number")
-                species.staleness = file:read("*number")
-                local numGenomes = file:read("*number")
-                for g=1,numGenomes do
-                        local genome = newGenome()
-                        table.insert(species.genomes, genome)
-                        genome.fitness = file:read("*number")
-                        genome.maxneuron = file:read("*number")
-                        local line = file:read("*line")
-                        while line ~= "done" do
-
-                                genome.mutationRates[line] = file:read("*number")
-                                line = file:read("*line")
-                        end
-                        local numGenes = file:read("*number")
-                        for n=1,numGenes do
-
-                                local gene = newGene()
-                                local enabled
-								
-								local geneStr = file:read("*line")
-								local geneArr = mysplit(geneStr)
-								gene.into = tonumber(geneArr[1])
-								gene.out = tonumber(geneArr[2])
-								gene.weight = tonumber(geneArr[3])
-								gene.innovation = tonumber(geneArr[4])
-								enabled = tonumber(geneArr[5])
-
-
-                                if enabled == 0 then
-                                        gene.enabled = false
-                                else
-                                        gene.enabled = true
-                                end
-                                
-								table.insert(genome.genes, gene)
-                        end
-                end
+        local contents = file:read("*all")
+        local obj, pos, err = json.decode(contents)
+        if err ~= nil then
+            statusLine = string.format("Error parsing: %s", err)
+            statusColor = 0x00990000
+            return
         end
-        file:close()
-        
+
+        pool = obj
+
         while fitnessAlreadyMeasured() do
                 nextGenome()
         end
@@ -1311,10 +1260,10 @@ function on_keyhook (key, state)
             playTop()
         elseif key == "6" then
             helddown = true
-            savePool()
+            saveRequested = true
         elseif key == "8" then
             helddown = true
-            loadPool()
+            loadRequested = true
         elseif key == "9" then
             helddown = true
             initializePool()

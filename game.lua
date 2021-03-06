@@ -1,9 +1,10 @@
 --Notes here
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 
-config = dofile(base.."/config.lua")
-spritelist = dofile(base.."/spritelist.lua")
-util = dofile(base.."/util.lua")
+local mathFunctions = dofile(base.."/mathFunctions.lua")
+local config = dofile(base.."/config.lua")
+local spritelist = dofile(base.."/spritelist.lua")
+local util = dofile(base.."/util.lua")
 local _M = {}
 
 TILE_SIZE = 32
