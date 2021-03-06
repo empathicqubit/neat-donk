@@ -9,6 +9,7 @@ TILE_COLLISION_MATH_POINTER = 0x7e17b2
 SPRITE_BASE = 0x7e0de2
 VERTICAL_POINTER = 0xc414
 TILEDATA_POINTER = 0x7e0098
+HAVE_BOTH = 0x7e08c2
 CAMERA_X = 0x7e17ba
 CAMERA_Y = 0x7e17c0
 PARTY_X = 0x7e0a2a
@@ -49,7 +50,7 @@ function _M.writeLives(lives)
 end
 
 function _M.getPowerup()
-	return 0
+	return memory.readword(HAVE_BOTH)
 end
 
 function _M.writePowerup(powerup)
