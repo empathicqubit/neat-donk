@@ -14,6 +14,8 @@ DIDDY_X_VELOCITY = 0x7e0e02
 DIDDY_Y_VELOCITY = 0x7e0e06
 DIXIE_X_VELOCITY = 0x7e0e60
 DIXIE_Y_VELOCITY = 0x7e0e64
+STAGE_NUMBER = 0x7e08a8
+STAGE_NUMBER_MOVEMENT = 0x7e08c8
 CAMERA_X = 0x7e17ba
 CAMERA_Y = 0x7e17c0
 CAMERA_MODE = 0x7e054f
@@ -256,9 +258,11 @@ Sprite Details:
 %s camera %d,%d
 Vertical: %s
 Tile offset: %04x
-]], direction, cameraX, cameraY, vertical, partyTileOffset)
+Stage number: %04x
+Stage (movement): %04x
+]], direction, cameraX, cameraY, vertical, partyTileOffset, memory.readword(STAGE_NUMBER), memory.readword(STAGE_NUMBER_MOVEMENT))
 
-    text(guiWidth - 200, guiHeight - 60, stats)
+    text(guiWidth - 200, guiHeight - 100, stats)
 
     text((partyX - 256 - cameraX) * 2, (partyY - 256 - cameraY) * 2 + 20, "Party")
 

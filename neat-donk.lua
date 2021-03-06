@@ -12,7 +12,6 @@ local util = dofile(base.."/util.lua")
 
 loadRequested = false
 saveRequested = false
-kong = 0
 lastBoth = 0
 form = nil
 netPicture = nil
@@ -661,8 +660,6 @@ function on_timer()
     if config.StartPowerup ~= NIL then
         game.writePowerup(config.StartPowerup)
     end
-    rightmost = 0
-    upmost = 0
     pool.currentFrame = 0
     timeout = config.NeatConfig.TimeoutConstant
     game.clearJoypad()
@@ -672,6 +669,10 @@ function on_timer()
     partyHitCounter = 0
     powerUpCounter = 0
     powerUpBefore = game.getBoth()
+    currentArea = game.getCurrentArea()
+    lastArea = currentArea
+    rightmost = { [currentArea] = 0 }
+    upmost = { [currentArea] = 0 }
     local species = pool.species[pool.currentSpecies]
     local genome = species.genomes[pool.currentGenome]
     generateNetwork(genome)
@@ -803,19 +804,33 @@ function mainLoop (species, genome)
         -- Don't punish being launched by barrels
         -- FIXME Will this skew mine cart levels?
         if game.getVelocityY() < -1850 then
-            statusLine = string.format("Gotta go fast!!! %d", partyX)
-            statusColor = 0x0000ff00
             timeout = timeoutConst + 60 * 2
         end
 
+        local nextArea = game.getCurrentArea()
+        if nextArea ~= lastArea then
+            lastArea = nextArea
+            game.onceAreaLoaded(function()
+                statusLine = string.format("Area changed: %02x", currentArea)
+                statusColor = 0x00009900
+                timeout = timeoutConst + 60 * 2
+                currentArea = nextArea
+                lastArea = currentArea
+                if rightmost[currentArea] == nil then
+                    rightmost[currentArea] = 0
+                    upmost[currentArea] = 0
+                end
+            end)
+        end
+
         if not vertical then
-            if partyX > rightmost then
-                rightmost = partyX
+            if partyX > rightmost[currentArea] then
+                rightmost[currentArea] = partyX
                 timeout = timeoutConst
             end
         else
-            if partyY > upmost then
-                upmost = partyY
+            if partyY > upmost[currentArea] then
+                upmost[currentArea] = partyY
                 timeout = timeoutConst
             end
         end
@@ -862,9 +877,15 @@ function mainLoop (species, genome)
 
             local most = 0
             if not vertical then
-                most = rightmost - pool.currentFrame / 2
+                for k,v in pairs(rightmost) do
+                    most = most + v
+                end
+                most = most - pool.currentFrame / 2
             else
-                most = upmost - pool.currentFrame / 2
+                for k,v in pairs(upmost) do
+                    most = most + v
+                end
+                most = most - pool.currentFrame / 2
             end
 
         
@@ -877,10 +898,12 @@ function mainLoop (species, genome)
             end
 
             -- FIXME sus
+            --[[
             if rightmost > 4816 then
                 fitness = fitness + 1000
                 print("!!!!!!Beat level!!!!!!!")
             end
+            -- ]]
             if fitness == 0 then
                 fitness = -1
             end
@@ -1212,6 +1235,8 @@ function displayForm()
 	gui.text(130, 80, "Lives: " .. game.getLives())
 	gui.text(230, 65, "Damage: " .. partyHitCounter)
 	gui.text(230, 80, "PowerUp: " .. powerUpCounter)
+	gui.text(320, 65, string.format("Current Area: %04x", currentArea))
+	gui.text(320, 80, "Rightmost: "..rightmost[currentArea])
 
     gui.rectangle(0, 100, 500, 50, 1, 0x000000000, 0x00990099)
     gui.text(5, 129, "..."..config.NeatConfig.SaveFile:sub(#config.NeatConfig.SaveFile - 55))

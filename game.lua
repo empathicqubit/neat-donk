@@ -23,6 +23,8 @@ SOLID_LESS_THAN = 0x7e00a0
 KONG_LETTERS = 0x7e0902
 MATH_LIVES = 0x7e08be
 DISPLAY_LIVES = 0x7e0c0
+MAIN_AREA_NUMBER = 0x7e08a8
+CURRENT_AREA_NUMBER = 0x7e08c8
 
 function _M.getPositions()
     leader = memory.readword(LEAD_CHAR)
@@ -200,6 +202,10 @@ function _M.getTile(dx, dy)
     return 1
 end
 
+function _M.getCurrentArea()
+    return memory.readword(CURRENT_AREA_NUMBER)
+end
+
 function _M.getJumpHeight()
     local sprite = _M.getSprite(leader)
     return sprite.jumpHeight
@@ -353,10 +359,23 @@ function _M.getInputs()
 	return inputs, inputDeltaDistance
 end
 
+_M.areaLoadedQueue = {}
+function _M.onceAreaLoaded(handler)
+    table.insert(_M.areaLoadedQueue, handler)
+end
+
 function _M.clearJoypad()
 	for b = 1,#config.ButtonNames do
 		input.set(0, b - 1, 0)
 	end
 end
+
+function processAreaLoad()
+    for i=#_M.areaLoadedQueue,1,-1 do
+        table.remove(_M.areaLoadedQueue, i)()
+    end
+end
+
+memory2.BUS:registerwrite(0xb517b2, processAreaLoad)
 
 return _M
