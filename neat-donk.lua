@@ -663,6 +663,7 @@ function on_timer()
     startKong = game.getKong()
     startBananas = game.getBananas()
     startKrem = game.getKremCoins()
+    lastKrem = startKrem
     startCoins = game.getCoins()
     startLives = game.getLives()
     partyHitCounter = 0
@@ -861,6 +862,11 @@ function mainLoop (species, genome)
             local coins = game.getCoins() - startCoins
             local krem = game.getKremCoins() - startKrem
             local kong = game.getKong()
+
+            if krem > lastKrem then
+                lastKrem = krem
+                timeout = timeoutConst + 60 * 5
+            end
             
             print(string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", bananas, coins, krem, kong))
 
@@ -868,7 +874,7 @@ function mainLoop (species, genome)
             if (bananas + coins) > 0 then 
                 print("Bananas, Coins, KONG added " .. bananaCoinsFitness .. " fitness")
             end
-            
+
             local hitPenalty = partyHitCounter * 100
             local powerUpBonus = powerUpCounter * 100
 
