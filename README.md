@@ -5,7 +5,7 @@ An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 ## Requirements
 
 * lsnes with **Lua 5.2** (do not try to build with 5.3, it does not work!)
-* A Donkey Kong Country 2 ROM
+* A Donkey Kong Country 2 1.1 US ROM (matching hash b79c2bb86f6fc76e1fc61c62fc16d51c664c381e58bc2933be643bbc4d8b610c)
 
 ## Instructions
 
