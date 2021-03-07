@@ -5,7 +5,6 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 local json = dofile(base.."/dkjson.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
 local config = dofile(base.."/config.lua")
-local spritelist = dofile(base.."/spritelist.lua")
 local game = dofile(base.."/game.lua")
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local util = dofile(base.."/util.lua")
@@ -21,8 +20,6 @@ frameAdvanced = {}
 saveLoadFile = config.NeatConfig.SaveFile
 statusLine = nil
 statusColor = 0x0000ff00
-spritelist.InitSpriteList()
-spritelist.InitExtSpriteList()
 
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
@@ -663,6 +660,7 @@ function on_timer()
     pool.currentFrame = 0
     timeout = config.NeatConfig.TimeoutConstant
     game.clearJoypad()
+    startKong = game.getKong()
     startBananas = game.getBananas()
     startKrem = game.getKremCoins()
     startCoins = game.getCoins()
@@ -852,8 +850,6 @@ function mainLoop (species, genome)
             end
         end
 
-        kong = game.getKong()
-        
         local lives = game.getLives()
 
         timeout = timeout - 1
@@ -864,6 +860,7 @@ function mainLoop (species, genome)
             local bananas = game.getBananas() - startBananas
             local coins = game.getCoins() - startCoins
             local krem = game.getKremCoins() - startKrem
+            local kong = game.getKong()
             
             print(string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", bananas, coins, krem, kong))
 
@@ -1258,7 +1255,7 @@ function displayForm()
 	gui.text(130, 30, "Max: " .. math.floor(pool.maxFitness))
 	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
 	gui.text(5, 65, "Bananas: " .. (game.getBananas() - startBananas))
-	gui.text(5, 80, "KONG: " .. kong)
+	gui.text(5, 80, "KONG: " .. (game.getKong() - startKong))
     gui.text(5, 95, "Krem: " .. (game.getKremCoins() - startKrem))
 	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
 	gui.text(130, 80, "Lives: " .. game.getLives())

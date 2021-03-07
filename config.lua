@@ -17,9 +17,10 @@ _M.PoolDir = _M.ScriptDir .. "/pool/"
 _M.State = {
 	"PiratePanic.lsmv",
 	"PiratePanicDitch.lsmv",
+	"PiratePanicKremcoin.lsmv",
 }
 
-_M.Filename = _M.PoolDir .. _M.State[2]
+_M.Filename = _M.PoolDir .. _M.State[3]
 
 --[[
 	Start game with specific powerup.

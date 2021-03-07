@@ -7,6 +7,9 @@ local spritelist = dofile(base.."/spritelist.lua")
 local util = dofile(base.."/util.lua")
 local _M = {}
 
+spritelist.InitSpriteList()
+spritelist.InitExtSpriteList()
+
 KREMCOINS = 0x7e08cc
 TILE_SIZE = 32
 ENEMY_SIZE = 64
@@ -335,10 +338,11 @@ function _M.getInputs()
 			end
 			
 			for i = 1,#sprites do
-				distx = math.abs(sprites[i].x - (partyX+dx*TILE_SIZE))
-				disty = math.abs(sprites[i].y - (partyY+dy*TILE_SIZE))
+                local sprite = sprites[i]
+				distx = math.abs(sprite.x - (partyX+dx*TILE_SIZE))
+				disty = math.abs(sprite.y - (partyY+dy*TILE_SIZE))
 				if distx <= TILE_SIZE / 2 and disty <= TILE_SIZE / 2 then
-					inputs[#inputs] = sprites[i].good
+					inputs[#inputs] = sprite.good
 					
 					local dist = math.sqrt((distx * distx) + (disty * disty))
 					if dist > TILE_SIZE / 2 then
