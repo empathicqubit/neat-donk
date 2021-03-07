@@ -14,12 +14,17 @@ An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 3. Load the DKC2 ROM: `File -> Load -> ROM...`
 4. Load the script: `Tools -> Run Lua script...`
 5. You may also want to turn off sound since it may get annoying. `Configure -> Sounds enabled`
+6. Look at config.lua for some settings you can change. Not all have been tested, but you should be able to change the number on the `_M.Filename =` line to get a different state file from the `_M.State` list.
 
 ## Keys
 1: Stop/start
+
 4: Play the best run
+
 6: Save the pool file
+
 8: Load the pool file
+
 9: Restart
 
 ## Notes
