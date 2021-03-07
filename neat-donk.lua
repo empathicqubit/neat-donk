@@ -9,6 +9,8 @@ local game = dofile(base.."/game.lua")
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local util = dofile(base.."/util.lua")
 
+game.registerHandlers()
+
 loadRequested = false
 saveRequested = false
 lastBoth = 0
@@ -854,82 +856,85 @@ function mainLoop (species, genome)
         local lives = game.getLives()
 
         timeout = timeout - 1
+
+        local krem = game.getKremCoins() - startKrem
+        if krem > lastKrem then
+            lastKrem = krem
+            timeout = timeoutConst + 60 * 5
+        end
         
+        -- Continue if we haven't timed out
         local timeoutBonus = pool.currentFrame / 4
-        if timeout + timeoutBonus <= 0 then
-        
-            local bananas = game.getBananas() - startBananas
-            local coins = game.getCoins() - startCoins
-            local krem = game.getKremCoins() - startKrem
-            local kong = game.getKong()
-
-            if krem > lastKrem then
-                lastKrem = krem
-                timeout = timeoutConst + 60 * 5
-            end
-            
-            print(string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", bananas, coins, krem, kong))
-
-            local bananaCoinsFitness = (krem * 100) + (kong * 60) + (bananas * 50) + (coins * 0.2)
-            if (bananas + coins) > 0 then 
-                print("Bananas, Coins, KONG added " .. bananaCoinsFitness .. " fitness")
-            end
-
-            local hitPenalty = partyHitCounter * 100
-            local powerUpBonus = powerUpCounter * 100
-
-            local most = 0
-            if not vertical then
-                for k,v in pairs(rightmost) do
-                    most = most + v
-                end
-                most = most - pool.currentFrame / 2
-            else
-                for k,v in pairs(upmost) do
-                    most = most + v
-                end
-                most = most - pool.currentFrame / 2
-            end
-
-        
-            local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
-
-            if startLives < lives then
-                local ExtraLiveBonus = (lives - startLives)*1000
-                fitness = fitness + ExtraLiveBonus
-                print("ExtraLiveBonus added " .. ExtraLiveBonus)
-            end
-
-            -- FIXME sus
-            --[[
-            if rightmost > 4816 then
-                fitness = fitness + 1000
-                print("!!!!!!Beat level!!!!!!!")
-            end
-            -- ]]
-            if fitness == 0 then
-                fitness = -1
-            end
-            genome.fitness = fitness
-            
-            if fitness > pool.maxFitness then
-                pool.maxFitness = fitness
-                writeFile(saveLoadFile .. ".gen" .. pool.generation .. ".pool")
-            end
-            
-            print("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
-            pool.currentSpecies = 1
-            pool.currentGenome = 1
-            while fitnessAlreadyMeasured() do
-                nextGenome()
-            end
-            initializeRun(function() 
-                mainLoop(species, genome)
-            end)
+        if timeout + timeoutBonus > 0 then
+            mainLoop(species, genome)
             return
         end
+        
+        -- Timeout calculations beyond this point
+        -- Manipulating the timeout value won't have
+        -- any effect
+        local bananas = game.getBananas() - startBananas
+        local coins = game.getCoins() - startCoins
+        local kong = game.getKong()
 
-        mainLoop(species, genome)
+        print(string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", bananas, coins, krem, kong))
+
+        local bananaCoinsFitness = (krem * 100) + (kong * 60) + (bananas * 50) + (coins * 0.2)
+        if (bananas + coins) > 0 then 
+            print("Bananas, Coins, KONG added " .. bananaCoinsFitness .. " fitness")
+        end
+
+        local hitPenalty = partyHitCounter * 100
+        local powerUpBonus = powerUpCounter * 100
+
+        local most = 0
+        if not vertical then
+            for k,v in pairs(rightmost) do
+                most = most + v
+            end
+            most = most - pool.currentFrame / 2
+        else
+            for k,v in pairs(upmost) do
+                most = most + v
+            end
+            most = most - pool.currentFrame / 2
+        end
+
+    
+        local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
+
+        if startLives < lives then
+            local ExtraLiveBonus = (lives - startLives)*1000
+            fitness = fitness + ExtraLiveBonus
+            print("ExtraLiveBonus added " .. ExtraLiveBonus)
+        end
+
+        -- FIXME sus
+        --[[
+        if rightmost > 4816 then
+            fitness = fitness + 1000
+            print("!!!!!!Beat level!!!!!!!")
+        end
+        -- ]]
+        if fitness == 0 then
+            fitness = -1
+        end
+        genome.fitness = fitness
+        
+        if fitness > pool.maxFitness then
+            pool.maxFitness = fitness
+            writeFile(saveLoadFile .. ".gen" .. pool.generation .. ".pool")
+        end
+        
+        print("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
+        pool.currentSpecies = 1
+        pool.currentGenome = 1
+        while fitnessAlreadyMeasured() do
+            nextGenome()
+        end
+        initializeRun(function() 
+            mainLoop(species, genome)
+        end)
     end)
 end
 

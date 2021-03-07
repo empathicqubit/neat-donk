@@ -369,23 +369,25 @@ function _M.getInputs()
 	return inputs, inputDeltaDistance
 end
 
-_M.areaLoadedQueue = {}
-function _M.onceAreaLoaded(handler)
-    table.insert(_M.areaLoadedQueue, handler)
-end
-
 function _M.clearJoypad()
 	for b = 1,#config.ButtonNames do
 		input.set(0, b - 1, 0)
 	end
 end
 
+local areaLoadedQueue = {}
+function _M.onceAreaLoaded(handler)
+    table.insert(areaLoadedQueue, handler)
+end
+
 function processAreaLoad()
-    for i=#_M.areaLoadedQueue,1,-1 do
-        table.remove(_M.areaLoadedQueue, i)()
+    for i=#areaLoadedQueue,1,-1 do
+        table.remove(areaLoadedQueue, i)()
     end
 end
 
-memory2.BUS:registerwrite(0xb517b2, processAreaLoad)
+function _M.registerHandlers()
+    memory2.BUS:registerwrite(0xb517b2, processAreaLoad)
+end
 
 return _M
