@@ -4,3 +4,4 @@ state/
 crashsave*
 *.backup
 *.pool*
+config.lua

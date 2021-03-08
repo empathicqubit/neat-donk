@@ -728,9 +728,76 @@ function evaluateCurrent()
     end
 end
 
+inputmode = false
 function on_input()
+    local sec, usec = utime()
     for i=#frameAdvanced,1,-1 do
         table.remove(frameAdvanced, i)()
+    end
+    if frame % 60 == 0 then
+        local sec2, usec2 = utime()
+        print(string.format("Frame took %d msec", (sec2 - sec + (usec2 - usec) / 100000) * 1000))
+    end
+
+    local inputs = input.raw()
+    if not inputmode then
+        saveLoadFile = config.NeatConfig.SaveFile
+        return
+    end
+    if helddown == nil then
+        local mapping = {
+            backslash = "\\",
+            colon = ":",
+            comma = ",",
+            exclaim = "!",
+            dollar = "$",
+            hash = "#",
+            caret = "^",
+            ampersand = "&",
+            asterisk = "*",
+            leftparen = "(",
+            rightparen = ")",
+            less = "<",
+            greater = ">",
+            quote = "'",
+            quotedbl = "\"",
+            semicolon = ";",
+            slash = "/",
+            question = "?",
+            leftcurly = "{",
+            leftbracket = "[",
+            rightcurly = "}",
+            rightbracket = "]",
+            pipe = "|",
+            tilde = "~",
+            underscore = "_",
+            at = "@",
+            period = ".",
+            equals = "=",
+            plus = "+",
+        }
+        for k,v in pairs(inputs) do
+            if v["type"] ~= "key" or v["value"] ~= 1 then
+                goto continue
+            end
+            if k == "back" then
+                config.NeatConfig.SaveFile = config.NeatConfig.SaveFile:sub(1, #config.NeatConfig.SaveFile-1)
+                helddown = k
+                goto continue
+            end
+            local m = k
+            if mapping[k] ~= nil then
+                m = mapping[k]
+            end
+            if #m ~= 1 then
+                goto continue
+            end
+            config.NeatConfig.SaveFile = config.NeatConfig.SaveFile..m
+            helddown = k
+            ::continue::
+        end
+    elseif helddown ~= nil and inputs[helddown]["value"] ~= 1 then
+        helddown = nil
     end
 end
 
@@ -741,6 +808,10 @@ end
 
 function mainLoop (species, genome)
     advanceFrame(function()
+        if loadRequested or saveRequested then
+            saveLoadFile = config.NeatConfig.SaveFile
+        end
+
         if loadRequested then
             loadRequested = false
             loadPool(mainLoop)
@@ -806,14 +877,14 @@ function mainLoop (species, genome)
         -- Don't punish being launched by barrels
         -- FIXME Will this skew mine cart levels?
         if game.getVelocityY() < -1850 then
-            timeout = timeoutConst + 60 * 2
+            timeout = timeout + 60 * 12
         end
 
         local nextArea = game.getCurrentArea()
         if nextArea ~= lastArea then
             lastArea = nextArea
             game.onceAreaLoaded(function()
-                timeout = timeoutConst + 60 * 2
+                timeout = timeout + 60 * 5
                 currentArea = nextArea
                 lastArea = currentArea
                 if rightmost[currentArea] == nil then
@@ -826,12 +897,16 @@ function mainLoop (species, genome)
         if not vertical then
             if partyX > rightmost[currentArea] then
                 rightmost[currentArea] = partyX
-                timeout = timeoutConst
+                if timeout < timeoutConst then
+                    timeout = timeoutConst
+                end
             end
         else
             if partyY > upmost[currentArea] then
                 upmost[currentArea] = partyY
-                timeout = timeoutConst
+                if timeout < timeoutConst then
+                    timeout = timeoutConst
+                end
             end
         end
         -- FIXME Measure distance to target / area exit
@@ -853,16 +928,21 @@ function mainLoop (species, genome)
             end
         end
 
+        local krem = game.getKremCoins() - startKrem
+        if krem > lastKrem then
+            statusLine = string.format("Kremcoin grabbed: %d", timeout)
+            statusColor = 0x00009900
+            lastKrem = krem
+            timeout = timeout + 60 * 10
+        end
+        
         local lives = game.getLives()
+        if lives == 0 then
+            timeout = 0
+        end
 
         timeout = timeout - 1
 
-        local krem = game.getKremCoins() - startKrem
-        if krem > lastKrem then
-            lastKrem = krem
-            timeout = timeoutConst + 60 * 5
-        end
-        
         -- Continue if we haven't timed out
         local timeoutBonus = pool.currentFrame / 4
         if timeout + timeoutBonus > 0 then
@@ -1064,13 +1144,12 @@ else
 end
 
 buttons = nil
-buttonCtx = gui.renderctx.new(500, 50)
+buttonCtx = gui.renderctx.new(500, 70)
 function displayButtons()
     buttonCtx:set()
     buttonCtx:clear()
 
-    gui.rectangle(0, 0, 500, 50, 1, 0x000000000, 0x00990099)
-    gui.text(5, 29, "..."..config.NeatConfig.SaveFile:sub(#config.NeatConfig.SaveFile - 55))
+    gui.rectangle(0, 0, 500, 70, 1, 0x000000000, 0x00990099)
     local startStop = ""
     if config.Running then
         startStop = "Stop"
@@ -1086,6 +1165,17 @@ function displayButtons()
 
     gui.text(320, 2, "[8] Load")
     gui.text(400, 2, "[9] Restart")
+
+    local insert = ""
+    local confirm = "[Tab] Type in filename"
+    if inputmode then
+        insert = "_"
+        confirm = "[Tab] Confirm filename"
+    end
+
+    gui.text(5, 29, "..."..config.NeatConfig.SaveFile:sub(-55)..insert)
+
+    gui.text(5, 50, confirm)
 
 	buttons = buttonCtx:render()
     gui.renderctx.setnull()
@@ -1311,27 +1401,32 @@ function on_paint()
     end
 end
 
-helddown = false
+helddown = nil
 function on_keyhook (key, state)
-    if not helddown and state.value == 1 then
-        if key == "1" then
-            helddown = true
+    if state.value == 1 then
+        if key == "tab" then
+            inputmode = not inputmode
+            helddown = key
+        elseif inputmode then
+            return
+        elseif key == "1" then
+            helddown = key
             config.Running = not config.Running
         elseif key == "4" then
-            helddown = true
+            helddown = key
             playTop()
         elseif key == "6" then
-            helddown = true
+            helddown = key
             saveRequested = true
         elseif key == "8" then
-            helddown = true
+            helddown = key
             loadRequested = true
         elseif key == "9" then
-            helddown = true
+            helddown = key
             initializePool()
         end
     elseif state.value == 0 then
-        helddown = false
+        helddown = nil
     end
 end
 
@@ -1340,4 +1435,4 @@ input.keyhook("4", true)
 input.keyhook("6", true)
 input.keyhook("8", true)
 input.keyhook("9", true)
-
+input.keyhook("tab", true)

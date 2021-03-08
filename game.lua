@@ -107,7 +107,7 @@ function _M.getHit(alreadyHit)
 end
 
 function _M.getHitTimer(lastBoth)
-	return (memory.readword(DISPLAY_LIVES) - memory.readword(MATH_LIVES))
+	return (memory.readsbyte(DISPLAY_LIVES) - memory.readsbyte(MATH_LIVES))
         + lastBoth - _M.getBoth()
 end
 
@@ -217,6 +217,9 @@ end
 
 function _M.getJumpHeight()
     local sprite = _M.getSprite(leader)
+    if sprite == nil then
+        return 0
+    end
     return sprite.jumpHeight
 end
 
