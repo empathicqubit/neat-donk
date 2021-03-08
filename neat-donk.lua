@@ -989,13 +989,11 @@ function mainLoop (species, genome)
             print("ExtraLiveBonus added " .. ExtraLiveBonus)
         end
 
-        -- FIXME sus
-        --[[
-        if rightmost > 4816 then
+        if game.getGoalHit() then
             fitness = fitness + 1000
-            print("!!!!!!Beat level!!!!!!!")
+            statusLine = string.format("LEVEL WON! Fitness: %d", fitness)
+            statusColor = 0x0000ff00
         end
-        -- ]]
         if fitness == 0 then
             fitness = -1
         end

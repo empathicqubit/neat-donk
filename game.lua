@@ -59,6 +59,23 @@ function _M.getKremCoins()
     return krem
 end
 
+function _M.getGoalHit()
+    local sprites = _M.getSprites()
+    for i=1,#sprites,1 do
+        local sprite = sprites[i]
+        if sprite.control ~= 0x0164 then
+            goto continue
+        end
+        -- Check if the goal barrel is moving up
+        if sprite.velocityY < 0 then
+            return true
+        end
+        ::continue::
+    end
+
+    return false
+end
+
 function _M.getKong()
     local kong = memory.readword(KONG_LETTERS)
     return bit.popcount(kong)

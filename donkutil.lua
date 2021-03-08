@@ -1,6 +1,10 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 
-util = dofile(base.."/util.lua")
+local util = dofile(base.."/util.lua")
+local spritelist = dofile(base.."/spritelist.lua")
+
+spritelist.InitSpriteList()
+spritelist.InitExtSpriteList()
 
 FG_COLOR = 0x00ffffff
 BG_COLOR = 0x99000000
@@ -281,7 +285,12 @@ Stage (movement): %04x
         local sprcolor = BG_COLOR
         if detailsidx == idx then
             sprcolor = 0x00ff0000
+        elseif spritelist.Sprites[sprite.control] == -1 then
+            sprcolor = 0x66990000
+        elseif spritelist.Sprites[sprite.control] == 1 then
+            sprcolor = 0x66009900
         end
+
         gui.text(sprite.screenX * 2, sprite.screenY * 2, string.format("%04x, %04x, %04x", sprite.control, sprite.animnum, sprite.attr), FG_COLOR, sprcolor)
 
         local filename = os.getenv("HOME").."/neat-donk/catchem/"..sprite.animnum..","..sprite.attr..".png"
