@@ -18,6 +18,7 @@ form = nil
 netPicture = nil
 runInitialized = {}
 frameAdvanced = {}
+timeout = 0
 
 saveLoadFile = config.NeatConfig.SaveFile
 statusLine = nil
@@ -876,7 +877,9 @@ function mainLoop (species, genome)
 
         -- Don't punish being launched by barrels
         -- FIXME Will this skew mine cart levels?
-        if game.getVelocityY() < -1850 then
+        if game.getVelocityY() < -2104 then
+            statusLine = "BARREL! "..frame
+            statusColor = 0x00ffff00
             timeout = timeout + 60 * 12
         end
 
@@ -884,6 +887,7 @@ function mainLoop (species, genome)
         if nextArea ~= lastArea then
             lastArea = nextArea
             game.onceAreaLoaded(function()
+                print("Loady")
                 timeout = timeout + 60 * 5
                 currentArea = nextArea
                 lastArea = currentArea
@@ -1347,7 +1351,7 @@ function displayForm()
 	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0x00000000)
 	gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
 
-	--gui.text(5, 30, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
+	gui.text(5, 30, "Timeout: " .. timeout)
 	gui.text(5, 5, "Generation: " .. pool.generation)
 	gui.text(130, 5, "Species: " .. pool.currentSpecies)
 	gui.text(230, 5, "Genome: " .. pool.currentGenome)

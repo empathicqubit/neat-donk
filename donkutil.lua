@@ -2,6 +2,8 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
 
 local util = dofile(base.."/util.lua")
 local spritelist = dofile(base.."/spritelist.lua")
+local game = dofile(base.."/game.lua")
+local config = dofile(base.."/config.lua")
 
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
@@ -42,8 +44,16 @@ lockdata = nil
 incsprite = 0
 questionable_tiles = false
 
-function text(x, y, msg)
-    gui.text(x, y, msg, FG_COLOR, BG_COLOR)
+font = gui.font.load(base.."font.font")
+
+function text(x, y, msg, fg, bg)
+    if fg == nil then
+        fg = FG_COLOR
+    end
+    if bg == nil then
+        bg = BG_COLOR
+    end
+    font(x, y, msg, fg, bg)
 end
 
 function on_keyhook (key, state)
@@ -134,7 +144,7 @@ function get_sprite(base_addr)
     return {
         base_addr = string.format("%04x", base_addr),
         screenX = x - 256 - cameraX,
-        screenY = y - 256 - cameraY,
+        screenY = y - 256 - cameraY - TILE_SIZE / 3,
         control = memory.readword(base_addr),
         draworder = memory.readword(base_addr + 0x02),
         x = x,
@@ -256,7 +266,7 @@ Sprite Details:
 
     local partyX = memory.readword(PARTY_X)
     local partyY = memory.readword(PARTY_Y)
-    local partyTileOffset = tileOffsetCalculation(partyX, partyY, vertical)
+    local partyTileOffset = game.tileOffsetCalculation(partyX, partyY, vertical)
 
     local stats = string.format([[
 %s camera %d,%d
@@ -264,9 +274,10 @@ Vertical: %s
 Tile offset: %04x
 Stage number: %04x
 Stage (movement): %04x
-]], direction, cameraX, cameraY, vertical, partyTileOffset, memory.readword(STAGE_NUMBER), memory.readword(STAGE_NUMBER_MOVEMENT))
+%s
+]], direction, cameraX, cameraY, vertical, partyTileOffset, memory.readword(STAGE_NUMBER), memory.readword(STAGE_NUMBER_MOVEMENT), util.table_to_string(game.getInputs()):gsub("[\\{\\},\n\"]", ""):gsub("-1", "X"):gsub("0", "."):gsub("1", "O"):gsub("(.............)", "%1\n"))
 
-    text(guiWidth - 200, guiHeight - 100, stats)
+    text(guiWidth - 125, guiHeight - 200, stats)
 
     text((partyX - 256 - cameraX) * 2, (partyY - 256 - cameraY) * 2 + 20, "Party")
 
@@ -291,7 +302,7 @@ Stage (movement): %04x
             sprcolor = 0x66009900
         end
 
-        gui.text(sprite.screenX * 2, sprite.screenY * 2, string.format("%04x, %04x, %04x", sprite.control, sprite.animnum, sprite.attr), FG_COLOR, sprcolor)
+        text(sprite.screenX * 2, sprite.screenY * 2, string.format("%04x, %04x, %04x", sprite.control, sprite.animnum, sprite.attr), FG_COLOR, sprcolor)
 
         local filename = os.getenv("HOME").."/neat-donk/catchem/"..sprite.animnum..","..sprite.attr..".png"
         if pokemon and spriteScreenX > (guiWidth / 4) and spriteScreenX < (guiWidth / 4) * 3 and spriteScreenY > (guiHeight / 3) and spriteScreenY < guiHeight and not util.file_exists(filename) then
@@ -308,13 +319,13 @@ Stage (movement): %04x
         local cameraTileX = math.floor(cameraX / TILE_SIZE)
         gui.line(0, halfHeight, guiWidth, halfHeight, BG_COLOR)
         for i = cameraTileX, cameraTileX + guiWidth / TILE_SIZE / 2,1 do
-            gui.text((i * TILE_SIZE - cameraX) * 2, halfHeight, tostring(i), FG_COLOR, BG_COLOR)
+            text((i * TILE_SIZE - cameraX) * 2, halfHeight, tostring(i), FG_COLOR, BG_COLOR)
         end
 
         local cameraTileY = math.floor(cameraY / TILE_SIZE)
         gui.line(halfWidth, 0, halfWidth, guiHeight, BG_COLOR)
         for i = cameraTileY, cameraTileY + guiHeight / TILE_SIZE / 2,1 do
-            gui.text(halfWidth, (i * TILE_SIZE - cameraY) * 2, tostring(i), FG_COLOR, BG_COLOR)
+            text(halfWidth, (i * TILE_SIZE - cameraY) * 2, tostring(i), FG_COLOR, BG_COLOR)
         end
     end
 
@@ -325,11 +336,11 @@ Stage (movement): %04x
             local tileX = math.floor((partyX + x * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
             local tileY = math.floor((partyY + y * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
 
-            local offset = tileOffsetCalculation(tileX, tileY, vertical)
+            local offset = game.tileOffsetCalculation(tileX, tileY, vertical)
 
             local tile = memory.readword(tilePtr + offset)
 
-            if not tileIsSolid(tileX, tileY, tile, offset) then
+            if not game.tileIsSolid(tileX, tileY, tile, offset) then
                 goto continue
             end
 
@@ -340,7 +351,7 @@ Stage (movement): %04x
                 --goto continue
             end
 
-            gui.text(screenX, screenY, string.format("%04x\n%02x", bit.band(offset, 0xffff), tile), FG_COLOR, 0x66888800)
+            text(screenX, screenY, string.format("%04x\n%02x", bit.band(offset, 0xffff), tile), FG_COLOR, 0x66888800)
 
             ::continue::
         end
@@ -375,7 +386,7 @@ Stage (movement): %04x
             end
 
             if bit.band(screenSprite.flags, 0x21) ~= 0x00 and screenSprite.tile >= 224 and screenSprite.tile <= 238 then
-                gui.text(screenSprite.x * 2, screenSprite.y * 2, screenSprite.tile, 0x00000000, 0x00ffff00)
+                text(screenSprite.x * 2, screenSprite.y * 2, screenSprite.tile, 0x00000000, 0x00ffff00)
             end
 
             ::continue::
@@ -389,91 +400,6 @@ Stage (movement): %04x
     end
 
     text(guiWidth - 125, 20, "Help [Hold 0]")
-end
-
--- Logic from 0xb5c3e1, 0xb5c414, 0xb5c82c
-function tileOffsetCalculation (x, y, vertical)
-    local newX = x - 256
-    local newY = y - 256
-
-    if not vertical then
-        if newY < 0 then
-            newY = 0
-        elseif newY >= 0x1ff then
-            newY = 0x1ff
-        end
-
-        newY = bit.band(bit.band(bit.bnot(newY), 0xffff) + 1, 0x1e0)
-
-        newX = bit.band(newX, 0xffe0)
-
-        newY = bit.lrshift(bit.band(bit.bxor(newY, 0x1e0), 0xffff), 4)
-
-        return newY + newX
-    else
-        newY = bit.band(bit.band(bit.bnot(newY), 0xffff) + 1, 0xffe0)
-
-        newX = bit.lrshift(bit.band(newX, 0xffe0), 4)
-
-        newY = bit.band(bit.lshift(bit.band(bit.bxor(newY, 0xffe0), 0xffff), 1), 0xffff)
-
-        return newY + newX
-    end
-end
-
--- 0xb5c94d
-function tileIsSolid(x, y, tileVal, tileOffset)
-    local origTileVal = tileVal
-
-    if tileVal == 0 or tileOffset == 0 then
-        return false
-    end
-
-    if questionable_tiles then
-        return true
-    end
-
-    local a2 = bit.band(x, 0x1f)
-
-    if bit.band(tileVal, 0x4000) ~= 0 then
-        a2 = bit.band(bit.bxor(a2, 0x1f), 0xffff)
-    end
-
-    tileVal = bit.band(tileVal, 0x3fff)
-
-    local solidLessThan = memory.readword(SOLID_LESS_THAN)
-
-    if tileVal >= solidLessThan then
-        return false
-    end
-
-    tileVal = bit.band(bit.lshift(tileVal, 2), 0xffff)
-
-    if bit.band(a2, 0x10) ~= 0 then
-        tileVal = tileVal + 2
-    end
-
-    local tileMeta = memory.readword(memory.readword(0x7e009c) + tileVal)
-
-    if bit.band(tileMeta, 0x8000) ~=0 then
-        a2 = bit.band(bit.bxor(a2, 0x000f), 0xffff)
-    end
-
-    if bit.band(tileMeta, tileVal, 0x2000) ~= 0 then
-        tileMeta = bit.band(bit.bxor(tileMeta, 0x8000), 0xffff)
-    end
-
-    tileMeta = bit.band(tileMeta, 0x00ff)
-
-    if tileMeta == 0 then
-        return false
-    end
-
-    tileMeta = bit.band(bit.bxor(tileMeta, 1), 0xffff)
-
-    -- FIXME further tests?
-
-    return true
 end
 
 function on_timer()

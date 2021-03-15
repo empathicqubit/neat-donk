@@ -55,6 +55,8 @@ _M.GoodSprites = {
     0x019c, -- Rambi
     0x0304, -- Clapper
 
+    0x01a8, -- DK Barrel label
+
     0x01b4, -- Krow's eggs
 
     0x0220, -- Flitter (used as unavoidable platforms in some levels)

@@ -359,21 +359,22 @@ function _M.getInputs()
 			
 			for i = 1,#sprites do
                 local sprite = sprites[i]
-				distx = math.abs(sprite.x - (partyX+dx*TILE_SIZE))
-				disty = math.abs(sprite.y - (partyY+dy*TILE_SIZE))
-				if distx <= TILE_SIZE / 2 and disty <= TILE_SIZE / 2 then
+				local distx = math.abs(sprite.x - (partyX+dx*TILE_SIZE))
+				local disty = math.abs(sprite.y - (partyY+dy*TILE_SIZE))
+                local dist = math.sqrt((distx * distx) + (disty * disty))
+				if dist <= TILE_SIZE * 1.25 then
 					inputs[#inputs] = sprite.good
 					
-					local dist = math.sqrt((distx * distx) + (disty * disty))
-					if dist > TILE_SIZE / 2 then
+					if dist > TILE_SIZE then
 						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
 					end
 				end
+                ::continue::
 			end
 
  			for i = 1,#extended do
-				distx = math.abs(extended[i]["x"]+cameraX - (partyX+dx*TILE_SIZE))
-				disty = math.abs(extended[i]["y"]+cameraY - (partyY+dy*TILE_SIZE))
+				local distx = math.abs(extended[i]["x"]+cameraX - (partyX+dx*TILE_SIZE))
+				local disty = math.abs(extended[i]["y"]+cameraY - (partyY+dy*TILE_SIZE))
 				if distx < TILE_SIZE / 2 and disty < TILE_SIZE / 2 then
 					
 					inputs[#inputs] = extended[i]["good"]

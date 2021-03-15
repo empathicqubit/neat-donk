@@ -20,7 +20,7 @@ _M.State = {
 	"PiratePanicKremcoin.lsmv",
 }
 
-_M.Filename = _M.PoolDir .. _M.State[3]
+_M.Filename = _M.PoolDir .. _M.State[1]
 
 --[[
 	Start game with specific powerup.

@@ -10,7 +10,7 @@ function _M.table_to_string(tbl)
     for _, k in ipairs(keys) do
         local v = tbl[k]
         if type(v) == "number" and v == 0 then
-            goto continue
+            --goto continue
         end
 
         -- Check the key type (ignore any numerical keys - assume its an array)
