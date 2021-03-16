@@ -662,6 +662,10 @@ function on_timer()
     end
     pool.currentFrame = 0
     timeout = config.NeatConfig.TimeoutConstant
+    -- Kill the run if we go back to the map screen
+    game.onceMapLoaded(function()
+        timeout = -100000
+    end)
     game.clearJoypad()
     startKong = game.getKong()
     startBananas = game.getBananas()
@@ -942,11 +946,6 @@ function mainLoop (species, genome)
             timeout = timeout + 60 * 10
         end
         
-        local lives = game.getLives()
-        if lives == 0 then
-            timeout = 0
-        end
-
         timeout = timeout - 1
 
         -- Continue if we haven't timed out
@@ -985,9 +984,10 @@ function mainLoop (species, genome)
             end
             most = most - pool.currentFrame / 2
         end
-
     
         local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
+
+        local lives = game.getLives()
 
         if startLives < lives then
             local ExtraLiveBonus = (lives - startLives)*1000

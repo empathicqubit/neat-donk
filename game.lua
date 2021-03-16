@@ -401,14 +401,28 @@ function _M.onceAreaLoaded(handler)
     table.insert(areaLoadedQueue, handler)
 end
 
+local mapLoadedQueue = {}
+function _M.onceMapLoaded(handler)
+    -- TODO For now we only want one at a time
+    mapLoadedQueue = {}
+    table.insert(mapLoadedQueue, handler)
+end
+
 function processAreaLoad()
     for i=#areaLoadedQueue,1,-1 do
         table.remove(areaLoadedQueue, i)()
     end
 end
 
+function processMapLoad()
+    for i=#mapLoadedQueue,1,-1 do
+        table.remove(mapLoadedQueue, i)()
+    end
+end
+
 function _M.registerHandlers()
     memory2.BUS:registerwrite(0xb517b2, processAreaLoad)
+    memory2.WRAM:registerread(0x06b1, processMapLoad)
 end
 
 return _M
