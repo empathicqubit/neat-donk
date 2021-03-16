@@ -10,6 +10,7 @@ _M.NeutralSprites = {
     -- Our heroes
     0x00e4, -- Diddy
     0x00e8, -- Dixie
+    0x0100, -- Stars
 
     -- Items that require too much interaction
     0x01a4, -- Barrel
@@ -27,6 +28,7 @@ _M.NeutralSprites = {
     0x0160, -- Goal base
     0x0164, -- Goal barrel
 
+    0x0238, -- Pow
     0x023c, -- Exploding crate
     0x0258, -- No Animals Sign
 }

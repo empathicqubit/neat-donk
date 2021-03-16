@@ -880,7 +880,9 @@ function mainLoop (species, genome)
         if game.getVelocityY() < -2104 then
             statusLine = "BARREL! "..frame
             statusColor = 0x00ffff00
-            timeout = timeout + 60 * 12
+            if timeout < timeoutConst + 60 * 12 then
+                timeout = timeout + 60 * 12
+            end
         end
 
         local nextArea = game.getCurrentArea()
