@@ -2,6 +2,8 @@
 
 An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 
+See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
+
 ## Requirements
 
 * lsnes with **Lua 5.2** (do not try to build with 5.3, it does not work!)
@@ -38,3 +40,8 @@ An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 * [Basic tilemap info from p4plus2/DKC2-disassembly](https://github.com/p4plus2/DKC2-disassembly)
 * [dkjson](http://dkolf.de/src/dkjson-lua.fsl/home)
 * [LibDeflate](https://github.com/SafeteeWoW/LibDeflate)
+
+## TODO
+
+* Incur penalty for non-hazardous enemy collisions to encourage neutralizing Klobber
+* Make enemies neutral when held? (Klobber, Click-Clack, etc.)
