@@ -20,7 +20,7 @@ See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
 
 If you want a better idea of what's going on with the tile and sprite calculations you may want to load `donkutil.lua`. It will mark the tiles with their offsets on the screen, give a crosshair with tile measurements (every 32 pixels), and list information about the sprites (you can use the 1 and 2 keys above the letter keys to page through them). Sprites labeled in green are considered "good", red is "bad", normal color is neutral. Solid red means that it's the active sprite in the info viewer.
 
-<img src="https://github.com/empathicqubit/vscode-cc65-vice-debug/blob/master/doc/donkutil.png?raw=true" />
+<img src="https://github.com/empathicqubit/neat-donk/blob/master/doc/donkutil.png?raw=true" />
 
 ## Keys
 1: Stop/start
