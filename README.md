@@ -14,9 +14,11 @@ See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
 1. Start lsnes
 2. Go to `Configure -> Settings -> Advanced` and change `LUA -> Maximum memory use` to `1024MB`
 3. Load the DKC2 ROM: `File -> Load -> ROM...`
-4. Load the script: `Tools -> Run Lua script...`
+4. Load the `neat-donk.lua` script: `Tools -> Run Lua script...`
 5. You may also want to turn off sound since it may get annoying. `Configure -> Sounds enabled`
 6. Look at config.lua for some settings you can change. Not all have been tested, but you should be able to change the number on the `_M.Filename =` line to get a different state file from the `_M.State` list.
+
+If you want a better idea of what's going on with the tile and sprite calculations you may want to load `donkutil.lua`. It will mark the tiles with their offsets on the screen, give a crosshair with tile measurements (every 32 pixels), and list information about the sprites (you can use the 1 and 2 keys above the letter keys to page through them). Sprites labeled in green are considered "good", red is "bad", normal color is neutral. Solid red means that it's the active sprite in the info viewer.
 
 ## Keys
 1: Stop/start
