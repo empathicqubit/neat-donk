@@ -1,6 +1,6 @@
 --Update to Seth-Bling's MarI/O app
 
-local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local json = dofile(base.."/dkjson.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
@@ -1351,7 +1351,7 @@ function displayForm()
 	formCtx:set()
     formCtx:clear()
 	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0x00000000)
-	gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
+	--gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
 
 	gui.text(5, 30, "Timeout: " .. timeout)
 	gui.text(5, 5, "Generation: " .. pool.generation)
