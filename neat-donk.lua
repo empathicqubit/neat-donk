@@ -741,7 +741,7 @@ function on_input()
     end
     if frame % 60 == 0 then
         local sec2, usec2 = utime()
-        print(string.format("Frame took %d msec", (sec2 - sec + (usec2 - usec) / 100000) * 1000))
+        print(string.format("Frame took %d msec", math.floor((sec2 - sec + (usec2 - usec) / 100000) * 1000)))
     end
 
     local inputs = input.raw()
