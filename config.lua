@@ -1,6 +1,6 @@
 local _M = {}
 
-local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 --[[
 	Change script dir to your script directory

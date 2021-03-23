@@ -1,4 +1,4 @@
-local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local util = dofile(base.."/util.lua")
 local spritelist = dofile(base.."/spritelist.lua")

@@ -1,5 +1,5 @@
 --Notes here
-local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*/)(.*)", "%1")
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local config = dofile(base.."/config.lua")
