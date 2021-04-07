@@ -10,25 +10,27 @@ local _M = {}
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
 
-KREMCOINS = 0x7e08cc
-TILE_SIZE = 32
-ENEMY_SIZE = 64
-TILE_COLLISION_MATH_POINTER = 0x7e17b2
-SPRITE_BASE = 0x7e0de2
-VERTICAL_POINTER = 0xc414
-TILEDATA_POINTER = 0x7e0098
-HAVE_BOTH = 0x7e08c2
-CAMERA_X = 0x7e17ba
-CAMERA_Y = 0x7e17c0
-LEAD_CHAR = 0x7e08a4
-PARTY_X = 0x7e0a2a
-PARTY_Y = 0x7e0a2c
-SOLID_LESS_THAN = 0x7e00a0
-KONG_LETTERS = 0x7e0902
-MATH_LIVES = 0x7e08be
-DISPLAY_LIVES = 0x7e0c0
-MAIN_AREA_NUMBER = 0x7e08a8
-CURRENT_AREA_NUMBER = 0x7e08c8
+local KREMCOINS = 0x7e08cc
+local TILE_SIZE = 32
+local ENEMY_SIZE = 64
+local TILE_COLLISION_MATH_POINTER = 0x7e17b2
+local SPRITE_BASE = 0x7e0de2
+local SPRITE_SIZE = 94
+local SPRITE_DYING = 0x1000
+local VERTICAL_POINTER = 0xc414
+local TILEDATA_POINTER = 0x7e0098
+local HAVE_BOTH = 0x7e08c2
+local CAMERA_X = 0x7e17ba
+local CAMERA_Y = 0x7e17c0
+local LEAD_CHAR = 0x7e08a4
+local PARTY_X = 0x7e0a2a
+local PARTY_Y = 0x7e0a2c
+local SOLID_LESS_THAN = 0x7e00a0
+local KONG_LETTERS = 0x7e0902
+local MATH_LIVES = 0x7e08be
+local DISPLAY_LIVES = 0x7e0c0
+local MAIN_AREA_NUMBER = 0x7e08a8
+local CURRENT_AREA_NUMBER = 0x7e08c8
 
 function _M.getPositions()
     leader = memory.readword(LEAD_CHAR)
@@ -241,7 +243,7 @@ function _M.getJumpHeight()
 end
 
 function _M.getSprite(idx)
-    local base_addr = idx * 94 + SPRITE_BASE
+    local base_addr = idx * SPRITE_SIZE + SPRITE_BASE
 
     local control = memory.readword(base_addr)
 
@@ -256,6 +258,10 @@ function _M.getSprite(idx)
         screenX = x - 256 - cameraX - 256,
         screenY = y - 256 - cameraY - 256,
         jumpHeight = memory.readword(base_addr + 0x0e),
+        -- style bits
+        -- 0x4000 0: Right facing 1: Flipped
+        -- 0x1000 0: Alive 1: Dying
+        style = memory.readword(base_addr + 0x12),
         velocityX = memory.readsword(base_addr + 0x20),
         velocityY = memory.readsword(base_addr + 0x24),
         x = x,
@@ -408,6 +414,34 @@ function _M.onceMapLoaded(handler)
     table.insert(mapLoadedQueue, handler)
 end
 
+local emptyHitQueue = {}
+function _M.onEmptyHit(handler)
+    emptyHitQueue = {}
+    table.insert(emptyHitQueue, handler)
+end
+
+function processEmptyHit(addr, val)
+    local idx = math.floor((bit.band(addr, 0xffff) - bit.band(SPRITE_BASE, 0xffff)) / SPRITE_SIZE)
+    local pow = _M.getSprite(idx)
+    if pow == nil or
+        pow.control ~= 0x0238 then
+        return
+    end
+
+    local sprites = _M.getSprites()
+    for i=1,#sprites,1 do
+        local sprite = sprites[i]
+        if bit.band(sprite.style, SPRITE_DYING) ~= 0 and
+            sprite.good == -1 then
+            return
+        end
+    end
+
+    for i=#emptyHitQueue,1,-1 do
+        emptyHitQueue[i]()
+    end
+end
+
 function processAreaLoad()
     for i=#areaLoadedQueue,1,-1 do
         table.remove(areaLoadedQueue, i)()
@@ -423,6 +457,9 @@ end
 function _M.registerHandlers()
     memory2.BUS:registerwrite(0xb517b2, processAreaLoad)
     memory2.WRAM:registerread(0x06b1, processMapLoad)
+    for i=2,22,1 do
+        memory2.WRAM:registerwrite(bit.band(SPRITE_BASE + SPRITE_SIZE * i, 0xffff), processEmptyHit)
+    end
 end
 
 return _M

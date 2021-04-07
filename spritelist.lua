@@ -5,6 +5,7 @@ _M.Sprites = {}
 -- Make sure this list is sorted before initialization.
 _M.NeutralSprites = {
     0x0020, -- Krow egg fragments
+    0x0060, -- Barrel fragments
     0x0064, -- Barrel fragments
 
     -- Our heroes

@@ -47,5 +47,6 @@ If you want a better idea of what's going on with the tile and sprite calculatio
 
 ## TODO
 
-* Incur penalty for non-hazardous enemy collisions to encourage neutralizing Klobber
-* Make enemies neutral when held? (Klobber, Click-Clack, etc.)
+[x] Incur penalty for non-hazardous enemy collisions to encourage neutralizing Klobber
+[ ] Make enemies neutral when held? (Klobber, Click-Clack, etc.)
+[ ] Multiple nets to handle different contexts s/a clicking map items

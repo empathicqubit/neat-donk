@@ -19,6 +19,7 @@ netPicture = nil
 runInitialized = {}
 frameAdvanced = {}
 timeout = 0
+bumps = 0
 
 saveLoadFile = config.NeatConfig.SaveFile
 statusLine = nil
@@ -666,6 +667,11 @@ function on_timer()
     game.onceMapLoaded(function()
         timeout = -100000
     end)
+    bumps = 0
+    -- Penalize player for collisions that do not result in enemy deaths
+    game.onEmptyHit(function()
+        bumps = bumps + 1
+    end)
     game.clearJoypad()
     startKong = game.getKong()
     startBananas = game.getBananas()
@@ -970,6 +976,7 @@ function mainLoop (species, genome)
         end
 
         local hitPenalty = partyHitCounter * 100
+        local bumpPenalty = bumps * 100
         local powerUpBonus = powerUpCounter * 100
 
         local most = 0
@@ -985,7 +992,7 @@ function mainLoop (species, genome)
             most = most - pool.currentFrame / 2
         end
     
-        local fitness = bananaCoinsFitness - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
+        local fitness = bananaCoinsFitness - bumpPenalty - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
 
         local lives = game.getLives()
 
@@ -1364,6 +1371,7 @@ function displayForm()
     gui.text(5, 95, "Krem: " .. (game.getKremCoins() - startKrem))
 	gui.text(130, 65, "Coins: " .. (game.getCoins() - startCoins))
 	gui.text(130, 80, "Lives: " .. game.getLives())
+    gui.text(130, 95, "Bumps: " .. bumps)
 	gui.text(230, 65, "Damage: " .. partyHitCounter)
 	gui.text(230, 80, "PowerUp: " .. powerUpCounter)
 	gui.text(320, 65, string.format("Current Area: %04x", currentArea))
