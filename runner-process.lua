@@ -58,11 +58,10 @@ runner.onSave(function(filename)
         outContents,
         json.encode({
             type = 'onSave',
+            filename = filename,
             speciesIndex = speciesIndex,
         })
     )
-
-    message("Will be saved once all currently active threads finish", 0x00990000)
 end)
 
 runner.onLoad(function(filename)
@@ -70,11 +69,10 @@ runner.onLoad(function(filename)
         outContents,
         json.encode({
             type = 'onLoad',
+            filename = filename,
             speciesIndex = speciesIndex,
         })
     )
-
-    message("Will be loaded once all currently active threads finish", 0x00990000)
 end)
 
 runner.run(

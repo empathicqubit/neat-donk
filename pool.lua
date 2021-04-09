@@ -22,6 +22,16 @@ local _M = {
 
 local pool = nil
 
+local function message(msg, color)
+    if color == nil then
+        color = 0x00009900
+    end
+
+    for i=#_M.onMessageHandler,1,-1 do
+        _M.onMessageHandler[i](msg, color)
+    end
+end
+
 local function newGenome()
 	local genome = {}
 	genome.genes = {}
@@ -418,16 +428,6 @@ end
 
 local function loadPool(after)
 	loadFile(_M.saveLoadFile, after)
-end
-
-local function message(msg, color)
-    if color == nil then
-        color = 0x00009900
-    end
-
-    for i=#_M.onMessageHandler,1,-1 do
-        _M.onMessageHandler[i](msg, color)
-    end
 end
 
 local function processRenderForm(form)

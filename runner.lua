@@ -665,6 +665,8 @@ local function save(_M)
     for i=#_M.onSaveHandler,1,-1 do
         _M.onSaveHandler[i](_M.saveLoadFile)
     end
+
+    message(_M, "Will be saved once all currently active threads finish", 0x00990000)
 end
 
 local function onSave(_M, handler)
@@ -675,6 +677,8 @@ local function load(_M)
     for i=#_M.onLoadHandler,1,-1 do
         _M.onLoadHandler[i](_M.saveLoadFile)
     end
+
+    message(_M, "Will be loaded once all currently active threads finish", 0x00990000)
 end
 
 local function onLoad(_M, handler)
