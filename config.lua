@@ -10,6 +10,8 @@ _M.ScriptDir = base
 _M.StateDir = _M.ScriptDir .. "/state/"
 _M.PoolDir = _M.ScriptDir .. "/pool/"
 
+_M.ROM = _M.ScriptDir .. "/rom.sfc"
+
 --[[
 	At the moment the first in list will get loaded.
 	Rearrange for other savestates. (will be redone soon)
@@ -33,6 +35,7 @@ _M.Filename = _M.PoolDir .. _M.State[1]
 _M.StartPowerup = 0
 
 _M.NeatConfig = {
+Threads = 4,
 --Filename = "DP1.state",
 SaveFile = _M.Filename .. ".pool",
 Filename = _M.Filename,

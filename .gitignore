@@ -6,3 +6,4 @@ crashsave*
 *.pool*
 *.lsvs
 config.lua
+*.sfc

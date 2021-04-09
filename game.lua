@@ -5,7 +5,19 @@ local mathFunctions = dofile(base.."/mathFunctions.lua")
 local config = dofile(base.."/config.lua")
 local spritelist = dofile(base.."/spritelist.lua")
 local util = dofile(base.."/util.lua")
-local _M = {}
+local _M = {
+    leader = 0,
+    tilePtr = 0,
+    vertical = false,
+	partyX = 0,
+	partyY = 0,
+	 
+	cameraX = 0,
+	cameraY = 0,
+	 
+	screenX = 0,
+	screenY = 0,
+}
 
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
@@ -33,17 +45,17 @@ local MAIN_AREA_NUMBER = 0x7e08a8
 local CURRENT_AREA_NUMBER = 0x7e08c8
 
 function _M.getPositions()
-    leader = memory.readword(LEAD_CHAR)
-    tilePtr = memory.readhword(TILEDATA_POINTER)
-    vertical = memory.readword(TILE_COLLISION_MATH_POINTER) == VERTICAL_POINTER
-	partyX = memory.readword(PARTY_X)
-	partyY = memory.readword(PARTY_Y)
+    _M.leader = memory.readword(LEAD_CHAR)
+    _M.tilePtr = memory.readhword(TILEDATA_POINTER)
+    _M.vertical = memory.readword(TILE_COLLISION_MATH_POINTER) == VERTICAL_POINTER
+	_M.partyX = memory.readword(PARTY_X)
+	_M.partyY = memory.readword(PARTY_Y)
 		
-	cameraX = memory.readword(CAMERA_X)
-	cameraY = memory.readword(CAMERA_Y)
+	_M.cameraX = memory.readword(CAMERA_X)
+	_M.cameraY = memory.readword(CAMERA_Y)
 		
-	_M.screenX = (partyX-256-cameraX)*2
-	_M.screenY = (partyY-256-cameraY)*2
+	_M.screenX = (_M.partyX-256-_M.cameraX)*2
+	_M.screenY = (_M.partyY-256-_M.cameraY)*2
 end
 
 function _M.getBananas()
@@ -100,7 +112,7 @@ function _M.getBoth()
 end
 
 function _M.getVelocityY()
-    local sprite = _M.getSprite(leader)
+    local sprite = _M.getSprite(_M.leader)
     if sprite == nil then
         return 1900
     end
@@ -108,7 +120,7 @@ function _M.getVelocityY()
 end
 
 function _M.getVelocityX()
-    local sprite = _M.getSprite(leader)
+    local sprite = _M.getSprite(_M.leader)
     if sprite == nil then
         return 1900
     end
@@ -216,12 +228,12 @@ function _M.tileIsSolid(x, y, tileVal, tileOffset)
 end
 
 function _M.getTile(dx, dy)
-    local tileX = math.floor((partyX + dx * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
-    local tileY = math.floor((partyY + dy * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
+    local tileX = math.floor((_M.partyX + dx * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
+    local tileY = math.floor((_M.partyY + dy * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
 
-    local offset = _M.tileOffsetCalculation(tileX, tileY, vertical)
+    local offset = _M.tileOffsetCalculation(tileX, tileY, _M.vertical)
 
-    local tile = memory.readword(tilePtr + offset)
+    local tile = memory.readword(_M.tilePtr + offset)
 
     if not _M.tileIsSolid(tileX, tileY, tile, offset) then
         return 0
@@ -235,7 +247,7 @@ function _M.getCurrentArea()
 end
 
 function _M.getJumpHeight()
-    local sprite = _M.getSprite(leader)
+    local sprite = _M.getSprite(_M.leader)
     if sprite == nil then
         return 0
     end
@@ -255,8 +267,8 @@ function _M.getSprite(idx)
     local y = memory.readword(base_addr + 0x0a)
     local sprite = {
         control = control,
-        screenX = x - 256 - cameraX - 256,
-        screenY = y - 256 - cameraY - 256,
+        screenX = x - 256 - _M.cameraX - 256,
+        screenY = y - 256 - _M.cameraY - 256,
         jumpHeight = memory.readword(base_addr + 0x0e),
         -- style bits
         -- 0x4000 0: Right facing 1: Flipped
@@ -365,8 +377,8 @@ function _M.getInputs()
 			
 			for i = 1,#sprites do
                 local sprite = sprites[i]
-				local distx = math.abs(sprite.x - (partyX+dx*TILE_SIZE))
-				local disty = math.abs(sprite.y - (partyY+dy*TILE_SIZE))
+				local distx = math.abs(sprite.x - (_M.partyX+dx*TILE_SIZE))
+				local disty = math.abs(sprite.y - (_M.partyY+dy*TILE_SIZE))
                 local dist = math.sqrt((distx * distx) + (disty * disty))
 				if dist <= TILE_SIZE * 1.25 then
 					inputs[#inputs] = sprite.good
@@ -379,8 +391,8 @@ function _M.getInputs()
 			end
 
  			for i = 1,#extended do
-				local distx = math.abs(extended[i]["x"]+cameraX - (partyX+dx*TILE_SIZE))
-				local disty = math.abs(extended[i]["y"]+cameraY - (partyY+dy*TILE_SIZE))
+				local distx = math.abs(extended[i]["x"]+_M.cameraX - (_M.partyX+dx*TILE_SIZE))
+				local disty = math.abs(extended[i]["y"]+_M.cameraY - (_M.partyY+dy*TILE_SIZE))
 				if distx < TILE_SIZE / 2 and disty < TILE_SIZE / 2 then
 					
 					inputs[#inputs] = extended[i]["good"]
