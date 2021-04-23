@@ -2,11 +2,18 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local Runner = dofile(base.."/runner.lua")
 local serpent = dofile(base.."/serpent.lua")
+local util = dofile(base.."/util.lua")
 
-local runnerData, err = serpent.load(os.getenv("RUNNER_DATA"))
+local runnerDataFile = io.open(os.getenv("RUNNER_DATA"), 'r')
+local runnerData, err = loadstring(runnerDataFile:read('*a'))
+runnerDataFile:close()
+
 if err ~= nil then
+    print(err)
     return
 end
+
+runnerData = runnerData()
 
 local speciesIndex = runnerData[3]
 

@@ -64,12 +64,20 @@ return function()
     end
 
     _M.run = function(species, generationIdx, speciesIdx, genomeCallback, finishCallback)
-        local trunc = io.open(tmpFileName, 'w')
-        trunc:close()
-
         local poppets = {}
         for i=1,#species,1 do
-            local poppet = io.popen("RUNNER_DATA='"..serpent.dump({species[i], generationIdx, speciesIdx + i - 1, tmpFileName}).."' lsnes --rom="..base.."/rom.sfc --unpause --lua="..base.."/runner-process.lua", 'r')
+            local outputFileName = tmpFileName..'_output_'..i
+            local trunc = io.open(outputFileName, 'w')
+            trunc:close()
+
+            local inputFileName = tmpFileName.."_input_"..i
+            local inputFile = io.open(inputFileName, 'w')
+            inputFile:write(serpent.dump({species[i], generationIdx, speciesIdx + i - 1, outputFileName}))
+            inputFile:close()
+            
+            local cmd = "RUNNER_DATA=\""..inputFileName.."\" lsnes \"--rom="..base.."/rom.sfc\" --unpause \"--lua="..base.."/runner-process.lua\""
+            message(_M, cmd)
+            local poppet = io.popen(cmd, 'r')
             table.insert(poppets, poppet)
         end
 
@@ -79,36 +87,39 @@ return function()
             poppet:close()
         end
         
-        local tmpFile = io.open(tmpFileName, "r")
-        local line = ""
-        repeat
-            local obj, err = serpent.load(line)
-            if err ~= nil then
-                goto continue
-            end
+        for i=1,#species,1 do
+            local outputFileName = tmpFileName..'_output_'..i
+            local outputFile = io.open(outputFileName, "r")
+            local line = ""
+            repeat
+                local obj, err = loadstring(line)
+                if err ~= nil then
+                    goto continue
+                end
 
-            if obj.type == 'onMessage' then
-                message(_M, obj.msg, obj.color)
-            elseif obj.type == 'onLoad' then
-                load(_M, obj.filename)
-            elseif obj.type == 'onSave' then
-                save(_M, obj.filename)
-            elseif obj.type == 'onGenome' then
-                species[obj.speciesIndex - speciesIdx + 1].genomes[obj.genomeIndex] = obj.genome
-                genomeCallback(obj.genome, obj.index)
-            elseif obj.type == 'onFinish' then
-                finishCallback()
-            end
+                obj = obj()
 
-            ::continue::
-            line = tmpFile:read()
-        until(line == "")
-        tmpFile:close()
-        local ok, err = os.remove(tmpFileName)
-        if err ~= nil then
-            message(_M, err)
-        elseif ok ~= true then
-            message(_M, 'UNSPECIFIED ERROR ON REMOVAL')
+                if obj == nil then
+                    goto continue
+                end
+
+                if obj.type == 'onMessage' then
+                    message(_M, obj.msg, obj.color)
+                elseif obj.type == 'onLoad' then
+                    load(_M, obj.filename)
+                elseif obj.type == 'onSave' then
+                    save(_M, obj.filename)
+                elseif obj.type == 'onGenome' then
+                    species[obj.speciesIndex - speciesIdx + 1].genomes[obj.genomeIndex] = obj.genome
+                    genomeCallback(obj.genome, obj.index)
+                elseif obj.type == 'onFinish' then
+                    finishCallback()
+                end
+
+                ::continue::
+                line = outputFile:read()
+            until(line == "" or line == nil)
+            outputFile:close()
         end
     end
 
