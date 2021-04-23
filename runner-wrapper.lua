@@ -1,6 +1,6 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
-local json = dofile(base.."/dkjson.lua")
+local serpent = dofile(base.."/serpent.lua")
 local tmpFileName = "/tmp/donk_runner_"..tostring(math.floor(random.integer(0, 0xffffffffffffffff))):hex()
 
 local function message(_M, msg, color)
@@ -69,7 +69,7 @@ return function()
 
         local poppets = {}
         for i=1,#species,1 do
-            local poppet = io.popen("RUNNER_DATA='"..json.encode({species[i], generationIdx, speciesIdx + i - 1, tmpFileName}).."' lsnes --rom="..base.."/rom.sfc --unpause --lua="..base.."/runner-process.lua", 'r')
+            local poppet = io.popen("RUNNER_DATA='"..serpent.dump({species[i], generationIdx, speciesIdx + i - 1, tmpFileName}).."' lsnes --rom="..base.."/rom.sfc --unpause --lua="..base.."/runner-process.lua", 'r')
             table.insert(poppets, poppet)
         end
 
@@ -82,7 +82,7 @@ return function()
         local tmpFile = io.open(tmpFileName, "r")
         local line = ""
         repeat
-            local obj, pos, err = json.decode(line)
+            local obj, err = serpent.load(line)
             if err ~= nil then
                 goto continue
             end

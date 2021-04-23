@@ -8,7 +8,7 @@ else
     Runner = dofile(base.."/runner.lua")
 end
 
-local json = dofile(base.."/dkjson.lua")
+local serpent = dofile(base.."/serpent.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
 
 local Inputs = config.InputSize+1
@@ -392,12 +392,12 @@ end
 
 local function writeFile(filename)
     local file = io.open(filename, "w")
-    local json = json.encode(pool)
-    local zlib = libDeflate:CompressDeflate(json)
+    local dump = serpent.dump(pool)
+    local zlib = libDeflate:CompressDeflate(dump)
     file:write("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x00")
     file:write(zlib)
     file:write(string.char(0,0,0,0))
-    file:write(bytes(#json % (2^32)))
+    file:write(bytes(#dump % (2^32)))
     file:close()
     return
 end
@@ -411,7 +411,7 @@ local function loadFile(filename, after)
         return
     end
     local contents = file:read("*all")
-    local obj, pos, err = json.decode(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
+    local obj, err = serpent.load(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
     if err ~= nil then
         message(string.format("Error parsing: %s", err), 0x00990000)
         return

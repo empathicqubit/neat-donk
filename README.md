@@ -35,18 +35,18 @@ If you want a better idea of what's going on with the tile and sprite calculatio
 
 ## Notes
 * Only tested on Pirate Panic
-* The pool files are gzipped json
+* The pool files are gzipped Serpent data
 
 ## Credits
 
 * [Donkey Hacks](http://donkeyhacks.zouri.jp/html/En-Us/dkc2/index.html)
 * [SethBling's Mar I/O](https://github.com/mam91/neat-genetic-mario)
 * [Basic tilemap info from p4plus2/DKC2-disassembly](https://github.com/p4plus2/DKC2-disassembly)
-* [dkjson](http://dkolf.de/src/dkjson-lua.fsl/home)
+* [Serpent](https://github.com/pkulchenko/serpent)
 * [LibDeflate](https://github.com/SafeteeWoW/LibDeflate)
 
 ## TODO
 
-[x] Incur penalty for non-hazardous enemy collisions to encourage neutralizing Klobber
-[ ] Make enemies neutral when held? (Klobber, Click-Clack, etc.)
-[ ] Multiple nets to handle different contexts s/a clicking map items
+- [x] Incur penalty for non-hazardous enemy collisions to encourage neutralizing Klobber
+- [ ] Make enemies neutral when held? (Klobber, Click-Clack, etc.)
+- [ ] Multiple nets to handle different contexts s/a clicking map items

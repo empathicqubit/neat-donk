@@ -1,9 +1,9 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local Runner = dofile(base.."/runner.lua")
-local json = dofile(base.."/dkjson.lua")
+local serpent = dofile(base.."/serpent.lua")
 
-local runnerData, pos, err = json.decode(os.getenv("RUNNER_DATA"))
+local runnerData, err = serpent.load(os.getenv("RUNNER_DATA"))
 if err ~= nil then
     return
 end
@@ -26,7 +26,7 @@ runner.onMessage(function(msg, color)
 
     table.insert(
         outContents,
-        json.encode({
+        serpent.dump({
             type = 'onMessage',
             speciesIndex = speciesIndex,
             msg = msg,
@@ -56,7 +56,7 @@ end)
 runner.onSave(function(filename)
     table.insert(
         outContents,
-        json.encode({
+        serpent.dump({
             type = 'onSave',
             filename = filename,
             speciesIndex = speciesIndex,
@@ -67,7 +67,7 @@ end)
 runner.onLoad(function(filename)
     table.insert(
         outContents,
-        json.encode({
+        serpent.dump({
             type = 'onLoad',
             filename = filename,
             speciesIndex = speciesIndex,
@@ -82,7 +82,7 @@ runner.run(
     function(genome, index)
         table.insert(
             outContents,
-            json.encode({
+            serpent.dump({
                 type = 'onGenome',
                 genome = genome,
                 genomeIndex = index,
@@ -93,7 +93,7 @@ runner.run(
     function()
         table.insert(
             outContents,
-            json.encode({
+            serpent.dump({
                 type = 'onFinish',
                 speciesIndex = speciesIndex,
             })
