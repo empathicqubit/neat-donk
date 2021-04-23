@@ -1,5 +1,6 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local config = dofile(base.."/config.lua")
 local serpent = dofile(base.."/serpent.lua")
 local tmpFileName = "/tmp/donk_runner_"..tostring(math.floor(random.integer(0, 0xffffffffffffffff))):hex()
 
@@ -75,7 +76,7 @@ return function()
             inputFile:write(serpent.dump({species[i], generationIdx, speciesIdx + i - 1, outputFileName}))
             inputFile:close()
             
-            local cmd = "RUNNER_DATA=\""..inputFileName.."\" lsnes \"--rom="..base.."/rom.sfc\" --unpause \"--lua="..base.."/runner-process.lua\""
+            local cmd = "RUNNER_DATA=\""..inputFileName.."\" lsnes \"--rom="..config.ROM.."\" --unpause \"--lua="..base.."/runner-process.lua\""
             message(_M, cmd)
             local poppet = io.popen(cmd, 'r')
             table.insert(poppets, poppet)

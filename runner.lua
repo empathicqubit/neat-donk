@@ -4,8 +4,6 @@ local config = dofile(base.."/config.lua")
 local game = dofile(base.."/game.lua")
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 
-game.registerHandlers()
-
 local Inputs = config.InputSize+1
 local Outputs = #config.ButtonNames
 
@@ -778,6 +776,8 @@ local function saveLoadInput(_M)
 end
 
 local function run(_M, species, generationIdx, speciesIdx, genomeCallback, finishCallback)
+    game.registerHandlers()
+
     _M.currentGenerationIndex = generationIdx
     _M.currentSpeciesIndex = speciesIdx
     _M.currentSpecies = species
