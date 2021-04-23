@@ -68,8 +68,6 @@ return function()
         local poppets = {}
         for i=1,#species,1 do
             local outputFileName = tmpFileName..'_output_'..i
-            local trunc = io.open(outputFileName, 'w')
-            trunc:close()
 
             local inputFileName = tmpFileName.."_input_"..i
             local inputFile = io.open(inputFileName, 'w')

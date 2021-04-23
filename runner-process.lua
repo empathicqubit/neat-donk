@@ -19,7 +19,7 @@ local speciesIndex = runnerData[3]
 
 local filename = runnerData[4]
 
-local outFile = io.open(filename, "a")
+local outFile = io.open(filename, "w")
 
 local outContents = {}
 
