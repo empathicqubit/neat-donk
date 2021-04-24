@@ -35,7 +35,7 @@ _M.Filename = _M.PoolDir .. _M.State[1]
 _M.StartPowerup = 0
 
 _M.NeatConfig = {
-Threads = 4,
+Threads = 8,
 --Filename = "DP1.state",
 SaveFile = _M.Filename .. ".pool",
 Filename = _M.Filename,

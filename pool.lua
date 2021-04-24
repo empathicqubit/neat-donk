@@ -407,7 +407,7 @@ end
 
 -- FIXME Save/load mechanism has to be rethought with items running in parallel
 local function loadFile(filename, after)
-    print("Loading pool from " .. filename)
+    message("Loading pool from " .. filename, 0x00999900)
     local file = io.open(filename, "r")
     if file == nil then
         message("File could not be loaded", 0x00990000)
@@ -431,6 +431,7 @@ end
 
 local function loadPool(after)
 	loadFile(_M.saveLoadFile, after)
+    after()
 end
 
 local function processRenderForm(form)
