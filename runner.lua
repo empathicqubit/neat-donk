@@ -47,6 +47,10 @@ local function displayGenome(genome)
 	cells[Inputs] = biasCell
 	
 	for o = 1,Outputs do
+        if o == 4 then
+            goto continue
+        end
+
 		cell = {}
 		cell.x = 400
 		cell.y = 20 + 14 * o
@@ -59,6 +63,7 @@ local function displayGenome(genome)
 			color = 0x00000000
 		end
 		gui.text(403, 10+14*o, config.ButtonNames[o], color, 0xff000000)
+        ::continue::
 	end
 	
 	for n,neuron in pairs(network.neurons) do
@@ -321,12 +326,18 @@ local function evaluateNetwork(network, inputs, inputDeltas)
 	
 	local outputs = {}
 	for o=1,Outputs do
+        if o == 4 then
+            goto continue
+        end
+
 		local button = o - 1
 		if network.neurons[config.NeatConfig.MaxNodes+o].value > 0 then
 			outputs[button] = true
 		else
 			outputs[button] = false
 		end
+
+        ::continue::
 	end
 	
 	return outputs
@@ -590,7 +601,13 @@ local function generateNetwork(genome)
 	end
 	
 	for o=1,Outputs do
-		network.neurons[config.NeatConfig.MaxNodes+o] = newNeuron()
+        if o == 4 then
+            goto continue
+        end
+
+        network.neurons[config.NeatConfig.MaxNodes+o] = newNeuron()
+
+        ::continue::
 	end
 	
 	table.sort(genome.genes, function (a,b)
