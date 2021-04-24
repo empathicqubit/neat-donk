@@ -32,7 +32,3 @@ pool.onRenderForm(function(form)
     end
 end)
 pool.run()
-
-function on_post_load()
-    print("HELLO LOAD")
-end

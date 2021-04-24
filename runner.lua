@@ -25,7 +25,7 @@ local genomeCtx = gui.renderctx.new(470, 200)
 local function displayGenome(genome)
     genomeCtx:set()
     genomeCtx:clear()
-    gui.solidrectangle(0, 0, 470, 200, 0x00606060)
+    gui.solidrectangle(0, 0, 470, 200, 0x99606060)
 	local network = genome.network
 	local cells = {}
 	local i = 1
@@ -60,7 +60,7 @@ local function displayGenome(genome)
 		if cell.value > 0 then
 			color = 0x000000FF
 		else
-			color = 0x00000000
+			color = 0x00ffffff
 		end
 		gui.text(403, 10+14*o, config.ButtonNames[o], color, 0xff000000)
         ::continue::
@@ -179,7 +179,7 @@ local function displayGenome(genome)
 
     local pos = 100
     for mutation,rate in pairs(genome.mutationRates) do
-        gui.text(100, pos, mutation .. ": " .. rate, 0x00000000, 0xff000000)
+        gui.text(100, pos, mutation .. ": " .. rate, 0x00ffffff, 0xff000000)
 
         pos = pos + 14
     end
@@ -203,7 +203,7 @@ function displayButtons()
     buttonCtx:set()
     buttonCtx:clear()
 
-    gui.rectangle(0, 0, 500, 70, 1, 0x000000000, 0x00990099)
+    gui.rectangle(0, 0, 500, 70, 1, 0x000000000, 0x33990099)
     local startStop = ""
     -- FIXME this won't work I think???
     if config.Running then
@@ -253,7 +253,7 @@ function displayForm(_M)
 
 	formCtx:set()
     formCtx:clear()
-	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0x00000000)
+	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0xbb000000)
 	--gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
 
 	gui.text(5, 30, "Timeout: " .. _M.timeout)
