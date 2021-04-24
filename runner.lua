@@ -258,7 +258,7 @@ function displayForm(_M)
 
 	gui.text(5, 30, "Timeout: " .. _M.timeout)
 	gui.text(5, 5, "Generation: " .. _M.currentGenerationIndex)
-	gui.text(130, 5, "Species: " .. _M.currentSpeciesIndex)
+	gui.text(130, 5, "Species: " .. _M.currentSpecies.id)
 	gui.text(230, 5, "Genome: " .. _M.currentGenomeIndex)
 	gui.text(130, 30, "Max: " .. math.floor(_M.maxFitness))
 	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
@@ -302,7 +302,7 @@ local function evaluateNetwork(network, inputs, inputDeltas)
 	table.insert(inputs, 1)
 	table.insert(inputDeltas,99)
 	if #inputs ~= Inputs then
-		print("Incorrect number of neural network inputs.")
+		message(_M, "Incorrect number of neural network inputs.", 0x00990000)
 		return {}
 	end
 	
@@ -401,7 +401,7 @@ local function mainLoop(_M, genome)
             if not pcall(function()
                 displayGenome(genome)
             end) then
-            message(_M, "Could not render genome graph")
+            message(_M, "Could not render genome graph", 0x00990000)
             end
         end
         
@@ -557,7 +557,7 @@ local function mainLoop(_M, genome)
             _M.genomeCallback(genome, _M.currentGenomeIndex)
         end
         
-        message(_M, string.format("Gen %d species %d genome %d fitness: %d", _M.currentGenerationIndex, _M.currentSpeciesIndex, _M.currentGenomeIndex, fitness))
+        message(_M, string.format("Gen %d species %d genome %d fitness: %d", _M.currentGenerationIndex, _M.currentSpecies.id, _M.currentGenomeIndex, fitness))
         _M.currentGenomeIndex = 1
         while fitnessAlreadyMeasured(_M) do
             _M.currentGenomeIndex = _M.currentGenomeIndex + 1
@@ -792,11 +792,10 @@ local function saveLoadInput(_M)
     end
 end
 
-local function run(_M, species, generationIdx, speciesIdx, genomeCallback, finishCallback)
+local function run(_M, species, generationIdx, genomeCallback, finishCallback)
     game.registerHandlers()
 
     _M.currentGenerationIndex = generationIdx
-    _M.currentSpeciesIndex = speciesIdx
     _M.currentSpecies = species
     _M.currentGenomeIndex = 1
     _M.genomeCallback = genomeCallback
@@ -841,7 +840,6 @@ end
 return function()
     local _M = {
         currentGenerationIndex = 1,
-        currentSpeciesIndex = 1,
         currentSpecies = nil,
         finishCallback = nil,
         genomeCallback = nil,
@@ -897,8 +895,8 @@ return function()
         onLoad(_M, handler)
     end
 
-    _M.run = function(species, generationIdx, speciesIdx, genomeCallback, finishCallback)
-        run(_M, species, generationIdx, speciesIdx, genomeCallback, finishCallback)
+    _M.run = function(species, generationIdx, genomeCallback, finishCallback)
+        run(_M, species, generationIdx, genomeCallback, finishCallback)
     end
 
     return _M

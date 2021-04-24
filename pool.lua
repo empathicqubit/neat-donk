@@ -276,6 +276,7 @@ end
 
 local function newPool()
 	local pool = {}
+    pool.speciesId = 1
 	pool.species = {}
 	pool.generation = 0
 	pool.innovation = Outputs
@@ -286,6 +287,8 @@ end
 
 local function newSpecies()
 	local species = {}
+    species.id = pool.speciesId
+    pool.speciesId = pool.speciesId + 1
 	species.topFitness = 0
 	species.staleness = 0
 	species.genomes = {}
@@ -626,6 +629,10 @@ local function newGeneration()
 		local child = children[c]
 		addToSpecies(child)
 	end
+
+    table.sort(pool.species, function(a,b)
+        return (#a.genomes < #b.genomes)
+    end)
 	
 	pool.generation = pool.generation + 1
 	
@@ -687,7 +694,6 @@ local function mainLoop(currentSpecies)
     runner.run(
         slice, 
         pool.generation, 
-        currentSpecies, 
         function()
             -- Genome callback
         end,

@@ -15,9 +15,13 @@ end
 
 runnerData = runnerData()
 
-local speciesIndex = runnerData[3]
+local species = runnerData[1]
 
-local filename = runnerData[4]
+local speciesId = species.id
+
+local generationIndex = runnerData[2]
+
+local filename = runnerData[3]
 
 local outFile = io.open(filename, "w")
 
@@ -35,7 +39,7 @@ runner.onMessage(function(msg, color)
         outContents,
         serpent.dump({
             type = 'onMessage',
-            speciesIndex = speciesIndex,
+            speciesId = speciesId,
             msg = msg,
             color = color,
         })
@@ -66,7 +70,7 @@ runner.onSave(function(filename)
         serpent.dump({
             type = 'onSave',
             filename = filename,
-            speciesIndex = speciesIndex,
+            speciesId = speciesId,
         })
     )
 end)
@@ -77,15 +81,14 @@ runner.onLoad(function(filename)
         serpent.dump({
             type = 'onLoad',
             filename = filename,
-            speciesIndex = speciesIndex,
+            speciesId = speciesId,
         })
     )
 end)
 
 runner.run(
-    runnerData[1],
-    runnerData[2],
-    speciesIndex,
+    species,
+    generationIndex,
     function(genome, index)
         table.insert(
             outContents,
@@ -93,7 +96,7 @@ runner.run(
                 type = 'onGenome',
                 genome = genome,
                 genomeIndex = index,
-                speciesIndex = speciesIndex,
+                speciesId = speciesId,
             })
         )
     end,
@@ -102,7 +105,7 @@ runner.run(
             outContents,
             serpent.dump({
                 type = 'onFinish',
-                speciesIndex = speciesIndex,
+                speciesId = speciesId,
             })
         )
         outFile:write(table.concat(outContents, "\n"))

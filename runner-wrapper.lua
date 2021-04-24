@@ -64,14 +64,14 @@ return function()
         onLoad(_M, handler)
     end
 
-    _M.run = function(species, generationIdx, speciesIdx, genomeCallback, finishCallback)
+    _M.run = function(species, generationIdx, genomeCallback, finishCallback)
         local poppets = {}
         for i=1,#species,1 do
             local outputFileName = tmpFileName..'_output_'..i
 
             local inputFileName = tmpFileName.."_input_"..i
             local inputFile = io.open(inputFileName, 'w')
-            inputFile:write(serpent.dump({species[i], generationIdx, speciesIdx + i - 1, outputFileName}))
+            inputFile:write(serpent.dump({species[i], generationIdx, outputFileName}))
             inputFile:close()
             
             local cmd = "RUNNER_DATA=\""..inputFileName.."\" lsnes \"--rom="..config.ROM.."\" --unpause \"--lua="..base.."/runner-process.lua\""
@@ -109,7 +109,13 @@ return function()
                 elseif obj.type == 'onSave' then
                     save(_M, obj.filename)
                 elseif obj.type == 'onGenome' then
-                    species[obj.speciesIndex - speciesIdx + 1].genomes[obj.genomeIndex] = obj.genome
+                    for i=1,#species,1 do
+                        local s = species[i]
+                        if s.id == obj.speciesId then
+                            s.genomes[obj.genomeIndex] = obj.genome
+                            break
+                        end
+                    end
                     genomeCallback(obj.genome, obj.index)
                 elseif obj.type == 'onFinish' then
                     finishCallback()
