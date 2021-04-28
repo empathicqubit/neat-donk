@@ -36,7 +36,7 @@ _M.StartPowerup = 0
 
 _M.NeatConfig = {
 Threads = 2,
-ThreadDontQuit = true,
+ThreadDontQuit = false,
 --Filename = "DP1.state",
 SaveFile = _M.Filename .. ".pool",
 Filename = _M.Filename,

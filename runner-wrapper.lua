@@ -19,7 +19,7 @@ for i=1,#temps,1 do
     end
 end
 
-local tmpFileName = tempDir.."donk_runner"
+local tmpFileName = tempDir.."/donk_runner"
 
 local function message(_M, msg, color)
     if color == nil then

@@ -256,6 +256,11 @@ function displayForm(_M)
 	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0xbb000000)
 	--gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
 
+    local rightmost = _M.rightmost[_M.currentArea]
+    if rightmost == nil then
+        rightmost = 0
+    end
+
 	gui.text(5, 30, "Timeout: " .. _M.timeout)
 	gui.text(5, 5, "Generation: " .. _M.currentGenerationIndex)
 	gui.text(130, 5, "Species: " .. _M.currentSpecies.id)
@@ -271,7 +276,7 @@ function displayForm(_M)
 	gui.text(230, 65, "Damage: " .. _M.partyHitCounter)
 	gui.text(230, 80, "PowerUp: " .. _M.powerUpCounter)
 	gui.text(320, 65, string.format("Current Area: %04x", _M.currentArea))
-	gui.text(320, 80, "Rightmost: ".._M.rightmost[_M.currentArea])
+	gui.text(320, 80, "Rightmost: "..rightmost)
 
     displayButtons()
     formCtx:set()
@@ -631,7 +636,7 @@ local function generateNetwork(genome)
 end
 
 local function elapsed(_M)
-    if config.StartPowerup ~= NIL then
+    if config.StartPowerup ~= nil then
         game.writePowerup(config.StartPowerup)
     end
     _M.currentFrame = 0

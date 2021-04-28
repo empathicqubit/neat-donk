@@ -1,5 +1,7 @@
 local _M = {}
 
+_M.isWin = package.config:sub(1, 1) == '\\'
+
 function _M.table_to_string(tbl)
     local result = "{"
     local keys = {}
