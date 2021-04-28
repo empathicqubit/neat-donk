@@ -5,7 +5,11 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 local game = dofile(base.."/game.lua")
 local config = dofile(base.."/config.lua")
 local pool = dofile(base.."/pool.lua")
-local util = dofile(base.."/util.lua")
+
+local json = require 'dkjson'
+local debuggee = dofile(base..'/vscode-debuggee.lua')
+local startResult, breakerType = debuggee.start(json)
+print('debuggee start ->', startResult, breakerType)
 
 local statusLine = nil
 local statusColor = 0x0000ff00
