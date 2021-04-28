@@ -2,8 +2,6 @@
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
-local game = dofile(base.."/game.lua")
-local config = dofile(base.."/config.lua")
 local pool = dofile(base.."/pool.lua")
 local util = dofile(base.."/util.lua")
 

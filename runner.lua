@@ -557,7 +557,7 @@ local function mainLoop(_M, genome)
             _M.genomeCallback(genome, _M.currentGenomeIndex)
         end
         
-        message(_M, string.format("Gen %d species %d genome %d fitness: %d", _M.currentGenerationIndex, _M.currentSpecies.id, _M.currentGenomeIndex, fitness))
+        message(_M, string.format("Gen %d species %d genome %d fitness: %d", _M.currentGenerationIndex, _M.currentSpecies.id, _M.currentGenomeIndex, math.floor(fitness)))
         _M.currentGenomeIndex = 1
         while fitnessAlreadyMeasured(_M) do
             _M.currentGenomeIndex = _M.currentGenomeIndex + 1

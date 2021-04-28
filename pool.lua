@@ -414,13 +414,13 @@ local function loadFile(filename, after)
         return
     end
     local contents = file:read("*all")
-    local obj, err = loadstring(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
-    if err ~= nil then
-        message(string.format("Error parsing: %s", err), 0x00990000)
+    local ok, obj = serpent.load(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
+    if not ok then
+        message("Error parsing pool file", 0x00990000)
         return
     end
 
-    pool = obj()
+    pool = obj
 end
 
 local function savePool()

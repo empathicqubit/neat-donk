@@ -1,8 +1,25 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local util = dofile(base.."/util.lua")
 local config = dofile(base.."/config.lua")
 local serpent = dofile(base.."/serpent.lua")
-local tmpFileName = "/tmp/donk_runner_"..tostring(math.floor(random.integer(0, 0xffffffffffffffff))):hex()
+local temps = {
+    os.getenv("TMPDIR"),
+    os.getenv("TEMP"),
+    os.getenv("TEMPDIR"),
+    os.getenv("TMP"),
+}
+
+local tempDir = "/tmp"
+for i=1,#temps,1 do
+    local temp = temps[i]
+    if temp ~= nil and temp ~= "" then
+        tempDir = temps[i]
+        break
+    end
+end
+
+local tmpFileName = tempDir.."donk_runner"
 
 local function message(_M, msg, color)
     if color == nil then
@@ -70,13 +87,40 @@ return function()
             local outputFileName = tmpFileName..'_output_'..i
 
             local inputFileName = tmpFileName.."_input_"..i
+            print(inputFileName)
             local inputFile = io.open(inputFileName, 'w')
             inputFile:write(serpent.dump({species[i], generationIdx, outputFileName}))
             inputFile:close()
             
-            local cmd = "RUNNER_DATA=\""..inputFileName.."\" lsnes \"--rom="..config.ROM.."\" --unpause \"--lua="..base.."/runner-process.lua\""
-            message(_M, cmd)
-            local poppet = io.popen(cmd, 'r')
+            local proc = "lsnes"
+            if util.isWin then
+                local checkParent = io.popen('powershell "(Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$PID).ParentProcessId)).ParentProcessId)").ExecutablePath')
+                proc = checkParent:read("*l")
+                checkParent:close()
+            else
+                -- FIXME Linux
+            end
+            print(proc)
+            local cmd = "\""..proc.."\" \"--rom="..config.ROM.."\" --unpause \"--lua="..base.."/runner-process.lua\""
+            local envs = {
+                RUNNER_DATA = inputFileName
+            }
+            if config.NeatConfig.ThreadDontQuit then
+                envs.RUNNER_DONT_QUIT = "1"
+            end
+
+            local cmdParts = {}
+            for k,v in pairs(envs) do
+                if util.isWin then
+                    table.insert(cmdParts, string.format("set %s=%s &&", k, v))
+                else
+                    table.insert(cmdParts, string.format("%s='%s'", k, v))
+                end
+            end
+            table.insert(cmdParts, cmd)
+            local fullCmd = table.concat(cmdParts, " ")
+            message(_M, fullCmd)
+            local poppet = io.popen(fullCmd, 'r')
             table.insert(poppets, poppet)
         end
 
@@ -91,12 +135,10 @@ return function()
             local outputFile = io.open(outputFileName, "r")
             local line = ""
             repeat
-                local obj, err = loadstring(line)
-                if err ~= nil then
+                local ok, obj = serpent.load(line)
+                if not ok then
                     goto continue
                 end
-
-                obj = obj()
 
                 if obj == nil then
                     goto continue

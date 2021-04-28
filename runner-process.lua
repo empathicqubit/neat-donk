@@ -5,15 +5,13 @@ local serpent = dofile(base.."/serpent.lua")
 local util = dofile(base.."/util.lua")
 
 local runnerDataFile = io.open(os.getenv("RUNNER_DATA"), 'r')
-local runnerData, err = loadstring(runnerDataFile:read('*a'))
+local ok, runnerData = serpent.load(runnerDataFile:read('*a'))
 runnerDataFile:close()
 
-if err ~= nil then
-    print(err)
+if not ok then
+    print("Deserialization error")
     return
 end
-
-runnerData = runnerData()
 
 local species = runnerData[1]
 
@@ -110,6 +108,8 @@ runner.run(
         )
         outFile:write(table.concat(outContents, "\n"))
         outFile:close()
-        exec('quit-emulator')
+        if os.getenv("RUNNER_DONT_QUIT") == nil then
+            exec('quit-emulator')
+        end
     end
 )
