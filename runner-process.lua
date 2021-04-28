@@ -1,38 +1,30 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local Promise = dofile(base.."/promise.lua")
+
 local Runner = dofile(base.."/runner.lua")
 local serpent = dofile(base.."/serpent.lua")
 local util = dofile(base.."/util.lua")
 
-local runnerDataFile = io.open(os.getenv("RUNNER_DATA"), 'r')
-local ok, runnerData = serpent.load(runnerDataFile:read('*a'))
-runnerDataFile:close()
+local inputFilePath = os.getenv("RUNNER_INPUT_FILE")
+local outputFilePath = os.getenv("RUNNER_OUTPUT_FILE")
 
-if not ok then
-    print("Deserialization error")
-    return
-end
-
-local species = runnerData[1]
-
-local speciesId = species.id
-
-local generationIndex = runnerData[2]
-
-local filename = runnerData[3]
-
-local outFile = io.open(filename, "w")
+local first = false
 
 local outContents = {}
 
 local statusLine = nil
 local statusColor = 0x0000ff00
 
+local species = nil
+local speciesId = nil
+local generationIndex = nil
+
 local runner = Runner()
 runner.onMessage(function(msg, color)
     statusLine = msg
     statusColor = color
-
+    print(msg)
     table.insert(
         outContents,
         serpent.dump({
@@ -84,32 +76,80 @@ runner.onLoad(function(filename)
     )
 end)
 
-runner.run(
-    species,
-    generationIndex,
-    function(genome, index)
-        table.insert(
-            outContents,
-            serpent.dump({
-                type = 'onGenome',
-                genome = genome,
-                genomeIndex = index,
-                speciesId = speciesId,
-            })
-        )
-    end,
-    function()
-        table.insert(
-            outContents,
-            serpent.dump({
-                type = 'onFinish',
-                speciesId = speciesId,
-            })
-        )
-        outFile:write(table.concat(outContents, "\n"))
+local waiter = util.waitForChange(inputFilePath)
+
+local function waitLoop()
+    if not first then
+        local sec, usec = utime()
+        local ts = sec * 1000000 + usec
+
+        local outFile = io.open(outputFilePath, "w")
+        outFile:write(serpent.dump({ type = 'onInit', ts = ts }))
         outFile:close()
-        if os.getenv("RUNNER_DONT_QUIT") == nil then
-            exec('quit-emulator')
-        end
+
+        print(string.format('Wrote init to output at %d', ts))
+
+        first = true
     end
-)
+
+    print('Waiting for input from master process')
+
+    waiter:read("*a")
+    util.closeCmd(waiter)
+
+    print('Received input from master process')
+
+    local inputFile = io.open(inputFilePath, 'r')
+    local ok, inputData = serpent.load(inputFile:read('*a'))
+    inputFile:close()
+
+    if not ok then
+        print("Deserialization error")
+        return
+    end
+
+    species = inputData[1]
+
+    speciesId = species.id
+
+    generationIndex = inputData[2]
+
+    outContents = {}
+
+    print('Running')
+
+    runner.run(
+        species,
+        generationIndex,
+        function(genome, index)
+            table.insert(
+                outContents,
+                serpent.dump({
+                    type = 'onGenome',
+                    genome = genome,
+                    genomeIndex = index,
+                    speciesId = speciesId,
+                })
+            )
+        end,
+        function()
+            table.insert(
+                outContents,
+                serpent.dump({
+                    type = 'onFinish',
+                    speciesId = speciesId,
+                })
+            )
+
+            waiter = util.waitForChange(inputFilePath)
+
+            local outFile = io.open(outputFilePath, "w")
+            outFile:write(table.concat(outContents, "\n"))
+            outFile:close()
+
+            waitLoop()
+        end
+    )
+end
+
+waitLoop()

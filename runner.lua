@@ -236,7 +236,6 @@ function displayButtons()
     gui.renderctx.setnull()
 end
 
-local frame = 0
 local formCtx = nil
 local form = nil
 function displayForm(_M)
@@ -244,7 +243,7 @@ function displayForm(_M)
         return
     end
 
-    if form ~= nil and frame % 10 ~= 0 then
+    if form ~= nil and _M.drawFrame % 10 ~= 0 then
         for i=#_M.onRenderFormHandler,1,-1 do
             _M.onRenderFormHandler[i](form)
         end
@@ -299,7 +298,7 @@ local function painting(_M)
     if formCtx == nil then
         formCtx = gui.renderctx.new(500, guiHeight)
     end
-    frame = frame + 1
+    _M.drawFrame = _M.drawFrame + 1
     displayForm(_M)
 end
 
@@ -402,7 +401,7 @@ local function mainLoop(_M, genome)
 
         genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
 
-        if frame % 10 == 0 then
+        if _M.drawFrame % 10 == 0 then
             if not pcall(function()
                 displayGenome(genome)
             end) then
@@ -433,7 +432,7 @@ local function mainLoop(_M, genome)
         -- Don't punish being launched by barrels
         -- FIXME Will this skew mine cart levels?
         if game.getVelocityY() < -2104 then
-            message(_M, "BARREL! "..frame, 0x00ffff00)
+            message(_M, "BARREL! ".._M.drawFrame, 0x00ffff00)
             if _M.timeout < timeoutConst + 60 * 12 then
                 _M.timeout = _M.timeout + 60 * 12
             end
@@ -567,6 +566,7 @@ local function mainLoop(_M, genome)
         while fitnessAlreadyMeasured(_M) do
             _M.currentGenomeIndex = _M.currentGenomeIndex + 1
             if _M.currentGenomeIndex > #_M.currentSpecies.genomes then
+                game.unregisterHandlers()
                 for i=#_M.dereg,1,-1 do
                     local d = table.remove(_M.dereg, i)
                     callback.unregister(d[1], d[2])
@@ -850,6 +850,7 @@ return function()
         genomeCallback = nil,
         currentGenomeIndex = 1,
         currentFrame = 0,
+        drawFrame = 0,
         maxFitness = 0,
 
         dereg = {},

@@ -640,6 +640,20 @@ local function newGeneration()
 	writeFile(_M.saveLoadFile .. ".gen" .. pool.generation .. ".pool")
 end
 
+local runner = Runner()
+runner.onMessage(function(msg, color)
+	message(msg, color)
+end)
+runner.onSave(function(filename)
+	_M.requestSave(filename)
+end)
+runner.onLoad(function(filename)
+	_M.requestLoad(filename)
+end)
+runner.onRenderForm(function(form)
+	processRenderForm(form)
+end)
+
 local loadRequested = false
 local saveRequested = false
 local function mainLoop(currentSpecies)
@@ -667,19 +681,7 @@ local function mainLoop(currentSpecies)
     if currentSpecies == nil then
         currentSpecies = 1
     end
-    local runner = Runner()
-    runner.onMessage(function(msg, color)
-        message(msg, color)
-    end)
-    runner.onSave(function(filename)
-        _M.requestSave(filename)
-    end)
-    runner.onLoad(function(filename)
-        _M.requestLoad(filename)
-    end)
-    runner.onRenderForm(function(form)
-        processRenderForm(form)
-    end)
+
     local slice = pool.species[currentSpecies]
     if config.NeatConfig.Threads > 1 then
         slice = {}

@@ -19,7 +19,10 @@ for i=1,#temps,1 do
     end
 end
 
-local tmpFileName = tempDir.."/donk_runner"
+local tmpFileName = tempDir.."/donk_runner_"..
+
+    string.hex(math.floor(random.integer(0, 0xffffffff)))..
+    string.hex(math.floor(random.integer(0, 0xffffffff)))
 
 local function message(_M, msg, color)
     if color == nil then
@@ -60,6 +63,7 @@ return function()
         onMessageHandler = {},
         onSaveHandler = {},
         onLoadHandler = {},
+        poppets = {},
     }
 
     _M.onRenderForm = function(handler)
@@ -82,55 +86,59 @@ return function()
     end
 
     _M.run = function(species, generationIdx, genomeCallback, finishCallback)
-        local poppets = {}
-        for i=1,#species,1 do
+        local hostProcess = "lsnes"
+        if util.isWin then
+            hostProcess = util.scrapeCmd('*l', 'powershell "(Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$PID).ParentProcessId)).ParentProcessId)").ExecutablePath')
+            if hostProcess == nil or hostProcess == "" then
+                hostProcess = "lsnes-bsnes.exe"
+            end
+        else
+            -- FIXME Linux
+        end
+
+        while #_M.poppets < #species do
+            local i = #_M.poppets+1
             local outputFileName = tmpFileName..'_output_'..i
-
             local inputFileName = tmpFileName.."_input_"..i
-            print(inputFileName)
-            local inputFile = io.open(inputFileName, 'w')
-            inputFile:write(serpent.dump({species[i], generationIdx, outputFileName}))
-            inputFile:close()
-            
-            local proc = "lsnes"
-            if util.isWin then
-                local checkParent = io.popen('powershell "(Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$PID).ParentProcessId)).ParentProcessId)").ExecutablePath')
-                proc = checkParent:read("*l")
-                checkParent:close()
-            else
-                -- FIXME Linux
-            end
-            print(proc)
-            local cmd = "\""..proc.."\" \"--rom="..config.ROM.."\" --unpause \"--lua="..base.."/runner-process.lua\""
+
+            message(_M, hostProcess)
+
             local envs = {
-                RUNNER_DATA = inputFileName
+                RUNNER_INPUT_FILE = inputFileName,
+                RUNNER_OUTPUT_FILE = outputFileName,
             }
-            if config.NeatConfig.ThreadDontQuit then
-                envs.RUNNER_DONT_QUIT = "1"
-            end
 
-            local cmdParts = {}
-            for k,v in pairs(envs) do
-                if util.isWin then
-                    table.insert(cmdParts, string.format("set %s=%s &&", k, v))
-                else
-                    table.insert(cmdParts, string.format("%s='%s'", k, v))
-                end
-            end
-            table.insert(cmdParts, cmd)
-            local fullCmd = table.concat(cmdParts, " ")
-            message(_M, fullCmd)
-            local poppet = io.popen(fullCmd, 'r')
-            table.insert(poppets, poppet)
+            local waiter = util.waitForChange(outputFileName)
+
+            local cmd = '"'..hostProcess..'" "--rom='..config.ROM..'" --unpause "--lua='..base..'/runner-process.lua"'
+            local poppet = util.popenCmd(cmd, nil, envs)
+            table.insert(_M.poppets, poppet)
+
+            waiter:read("*a")
+            util.closeCmd(waiter)
         end
 
-        for i=1,#poppets,1 do
-            local poppet = poppets[i]
-            poppet:read('*a')
-            poppet:close()
-        end
-        
+        local outputFileName = tmpFileName..'_output_*'
+        local waiter = util.waitForChange(outputFileName, #species)
+
+        message(_M, 'Setting up child processes')
+
         for i=1,#species,1 do
+            local inputFileName = tmpFileName.."_input_"..i
+            local inputFile = io.open(inputFileName, 'w')
+            inputFile:write(serpent.dump({species[i], generationIdx}))
+            inputFile:close()
+        end
+
+        message(_M, 'Waiting for child processes to finish')
+
+        waiter:read("*a")
+        util.closeCmd(waiter)
+
+        message(_M, 'Child processes finished')
+
+        for i=1,#species,1 do
+            message(_M, "Processing output "..i)
             local outputFileName = tmpFileName..'_output_'..i
             local outputFile = io.open(outputFileName, "r")
             local line = ""

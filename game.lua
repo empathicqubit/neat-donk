@@ -349,7 +349,6 @@ function _M.getExtendedSprites()
 	return extended
 end
 
-callcount = 0
 function _M.getInputs()
 	_M.getPositions()
 	
@@ -432,7 +431,7 @@ function _M.onEmptyHit(handler)
     table.insert(emptyHitQueue, handler)
 end
 
-function processEmptyHit(addr, val)
+local function processEmptyHit(addr, val)
     local idx = math.floor((bit.band(addr, 0xffff) - bit.band(SPRITE_BASE, 0xffff)) / SPRITE_SIZE)
     local pow = _M.getSprite(idx)
     if pow == nil or
@@ -454,23 +453,41 @@ function processEmptyHit(addr, val)
     end
 end
 
-function processAreaLoad()
+local function processAreaLoad()
     for i=#areaLoadedQueue,1,-1 do
         table.remove(areaLoadedQueue, i)()
     end
 end
 
-function processMapLoad()
+local function processMapLoad()
     for i=#mapLoadedQueue,1,-1 do
         table.remove(mapLoadedQueue, i)()
     end
 end
 
+local handlers = {}
+local function registerHandler(space, regname, addr, callback)
+    table.insert(handlers, { 
+        
+        fn = space[regname](space, addr, callback),
+        unregisterFn = space['un'..regname],
+        space = space,
+        addr = addr,
+    })
+end
+
+function _M.unregisterHandlers()
+    for i=#handlers,1,-1 do
+        local handler = table.remove(handlers, i)
+        handler.unregisterFn(handler.space, handler.addr, handler.fn)
+    end
+end
+
 function _M.registerHandlers()
-    memory2.BUS:registerwrite(0xb517b2, processAreaLoad)
-    memory2.WRAM:registerread(0x06b1, processMapLoad)
+    registerHandler(memory2.BUS, 'registerwrite', 0xb517b2, processAreaLoad)
+    registerHandler(memory2.WRAM, 'registerread', 0x06b1, processMapLoad)
     for i=2,22,1 do
-        memory2.WRAM:registerwrite(bit.band(SPRITE_BASE + SPRITE_SIZE * i, 0xffff), processEmptyHit)
+        registerHandler(memory2.WRAM, 'registerwrite', bit.band(SPRITE_BASE + SPRITE_SIZE * i, 0xffff), processEmptyHit)
     end
 end
 
