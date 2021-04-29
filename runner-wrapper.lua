@@ -20,7 +20,6 @@ for i=1,#temps,1 do
 end
 
 local tmpFileName = tempDir.."/donk_runner_"..
-
     string.hex(math.floor(random.integer(0, 0xffffffff)))..
     string.hex(math.floor(random.integer(0, 0xffffffff)))
 
@@ -96,10 +95,24 @@ return function()
             -- FIXME Linux
         end
 
+        local inputPrefix = tmpFileName..'_input_'
+        local outputPrefix = tmpFileName..'_output_'
+        
+        -- Create the input files and output files
+        for i=1,#species,1 do
+            local inputFileName = inputPrefix..i
+            local inputFile = io.open(inputFileName, 'a')
+            inputFile:close()
+
+            local outputFileName = outputPrefix..i
+            local outputFile = io.open(outputFileName, 'a')
+            outputFile:close()
+        end
+
         while #_M.poppets < #species do
             local i = #_M.poppets+1
-            local outputFileName = tmpFileName..'_output_'..i
-            local inputFileName = tmpFileName.."_input_"..i
+            local outputFileName = outputPrefix..i
+            local inputFileName = inputPrefix..i
 
             message(_M, hostProcess)
 
@@ -118,12 +131,17 @@ return function()
             util.closeCmd(waiter)
         end
 
-        local outputFileName = tmpFileName..'_output_*'
-        local waiter = util.waitForChange(outputFileName, #species)
+        local waiters = {}
+        for i=1,#species,1 do
+            table.insert(waiters, outputPrefix..i)
+        end
+
+        local waiter = util.waitForChange(waiters, nil, tmpFileName.."output_*")
 
         message(_M, 'Setting up child processes')
 
         for i=1,#species,1 do
+
             local inputFileName = tmpFileName.."_input_"..i
             local inputFile = io.open(inputFileName, 'w')
             inputFile:write(serpent.dump({species[i], generationIdx}))

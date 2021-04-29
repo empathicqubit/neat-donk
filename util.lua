@@ -72,20 +72,48 @@ function _M.closeCmd(handle)
     end
 end
 
-function _M.waitForChange(filename, count)
+function _M.waitForChange(filenames, count, wild)
+    if type(filenames) == 'string' then
+        if wild == nil then
+            wild = filenames
+        end
+
+        filenames = {filenames}
+    end
+
     if count == nil then
-        count = 1
+        count = #filenames
     end
 
     if _M.isWin then
         local sec, usec = utime()
         print(string.format('Starting watching file at %d', sec * 1000000 + usec))
 
-        return _M.popenCmd([[powershell "$filename = ']]..filename..
+        return _M.popenCmd([[powershell "$filename = ']]..wild..
         [[' ; $targetCount = ]]..count..[[ ; $count = 0 ; Register-ObjectEvent (New-Object IO.FileSystemWatcher (Split-Path $filename), (Split-Path -Leaf $filename) -Property @{ IncludeSubdirectories = $false ; NotifyFilter =  [IO.NotifyFilters]'FileName, LastWrite'}) -EventName Changed -SourceIdentifier RunnerDataChanged -Action { $count += 1 ; if ( $count -ge $targetCount ) { [Environment]::Exit(0) } } ; while($true) { Start-Sleep -Milliseconds 1 }"]])
     else
-        error("Not implemented")
-        -- FIXME Linux
+        local watchCmd = ''
+        if count == 1 then
+            watchCmd = [[which inotifywait >/dev/null && { inotifywait -q -e close_write ']]..filenames[1]..[[' || exit 0 ; }]]
+        else
+            watchCmd = [[bash <<'EOF'
+COUNT=]]..count..[[ 
+FILENAMES=(']]..table.concat(filenames, "' '")..[[')
+declare -A SEEN
+((I = 0))
+set -m
+which inotifywait >/dev/null
+( inotifywait -q -m -e close_write "${FILENAMES[@]}" | while read LINE ; do
+    SEEN["$LINE"]=1
+    TOTAL=${#SEEN[@]}
+    if ((TOTAL == COUNT)) ; then 
+        kill -s TERM 0
+    fi
+done ) &
+wait
+EOF]]
+        end
+        return _M.popenCmd(watchCmd)
     end
 end
 

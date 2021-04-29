@@ -17,7 +17,7 @@ local statusLine = nil
 local statusColor = 0x0000ff00
 
 local species = nil
-local speciesId = nil
+local speciesId = -1
 local generationIndex = nil
 
 local runner = Runner()
@@ -99,13 +99,16 @@ local function waitLoop()
 
     print('Received input from master process')
 
-    local inputFile = io.open(inputFilePath, 'r')
-    local ok, inputData = serpent.load(inputFile:read('*a'))
-    inputFile:close()
+    local inputData = nil
+    local ok = false
+    while not ok or inputData == nil or speciesId == inputData[1].id do
+        local inputFile = io.open(inputFilePath, 'r')
+        ok, inputData = serpent.load(inputFile:read('*a'))
+        inputFile:close()
 
-    if not ok then
-        print("Deserialization error")
-        return
+        if not ok then
+            print("Deserialization error")
+        end
     end
 
     species = inputData[1]
