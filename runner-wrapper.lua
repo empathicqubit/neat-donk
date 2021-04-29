@@ -58,6 +58,10 @@ local function onMessage(_M, handler)
 end
 
 return function()
+    util.downloadFile('https://github.com/watchexec/watchexec/releases/download/1.13.1/watchexec-1.13.1-x86_64-pc-windows-gnu.zip', base..'/watchexec.zip')
+    util.unzip(base..'/watchexec.zip', base)
+    os.rename(base..'watchexec-1.13.1-x86_64-pc-windows-gnu', base..'/watchexec')
+
     local _M = {
         onMessageHandler = {},
         onSaveHandler = {},
@@ -128,14 +132,13 @@ return function()
                 APPDATA = settingsDir,
             }
 
-            local waiter = util.waitForChange(outputFileName)
+            local waiter = util.startWaiting(outputFileName)
 
             local cmd = '"'..hostProcess..'" "--rom='..config.ROM..'" --unpause "--lua='..base..'/runner-process.lua"'
             local poppet = util.popenCmd(cmd, nil, envs)
             table.insert(_M.poppets, poppet)
 
-            waiter:read("*a")
-            util.closeCmd(waiter)
+            util.finishWaiting(waiter)
         end
 
         local waiters = {}
@@ -143,7 +146,7 @@ return function()
             table.insert(waiters, outputPrefix..i)
         end
 
-        local waiter = util.waitForChange(waiters, nil, tmpFileName.."_output_*")
+        local waiter = util.startWaiting(waiters, nil, tmpFileName.."_output_*")
 
         message(_M, 'Setting up child processes')
 
@@ -157,8 +160,7 @@ return function()
 
         message(_M, 'Waiting for child processes to finish')
 
-        waiter:read("*a")
-        util.closeCmd(waiter)
+        util.finishWaiting(waiter, #waiters)
 
         message(_M, 'Child processes finished')
 

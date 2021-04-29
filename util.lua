@@ -1,3 +1,5 @@
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
+
 local _M = {}
 
 _M.isWin = package.config:sub(1, 1) == '\\'
@@ -42,6 +44,22 @@ function _M.doCmd(...)
     return _M.scrapeCmd('*a', ...)
 end
 
+--- Download a url
+--- @param url string URI of resource to download
+--- @param dest string File to save resource to
+function _M.downloadFile (url, dest)
+    return _M.doCmd('curl -sL "'..url..'" > "'..dest..'" || wget -qO- "'..url..'" > "'..dest..'"')
+end
+
+--- Unzip a ZIP file with unzip or tar
+--- @param zipfile string The ZIP file path
+--- @param dest string Where to unzip the ZIP file. Beware ZIP bombs.
+function _M.unzip (zipfile, dest)
+    return _M.doCmd('unzip "'..zipfile..'" -d "'..dest..
+    '" 2>&1 || tar -C "'..dest..'" -xvf "'..zipfile..
+    '" 2>&1', nil)
+end
+
 --- Create a directory
 --- @return string dir The directory to create
 function _M.mkdir(dir)
@@ -82,7 +100,27 @@ function _M.closeCmd(handle)
     end
 end
 
-function _M.waitForChange(filenames, count, wild)
+function _M.finishWaiting(waiter, count)
+    if count == nil then
+        count = 1
+    end
+
+    if _M.isWin then
+        local i = 1
+        while i <= count do
+            local line = waiter:read("*l")
+            for chr in line:gmatch(";") do
+                i = i + 1
+            end
+            i = i + 1
+        end
+    else
+        waiter:read("*a")
+        _M.closeCmd(waiter)
+    end
+end
+
+function _M.startWaiting(filenames, count, wild)
     if type(filenames) == 'string' then
         if wild == nil then
             wild = filenames
@@ -99,11 +137,10 @@ function _M.waitForChange(filenames, count, wild)
         local sec, usec = utime()
         print(string.format('Starting watching file at %d', sec * 1000000 + usec))
 
-        local poppet = _M.popenCmd([[powershell "$filename = ']]..wild..
-        [[' ; $targetCount = ]]..count..[[ ; $count = 0 ; $action = { $count += 1 ; if ( $count -ge $targetCount ) { [Environment]::Exit(0) } } ; (Register-ObjectEvent (New-Object IO.FileSystemWatcher (Split-Path $filename), (Split-Path -Leaf $filename) -Property @{ IncludeSubdirectories = $false ; NotifyFilter =  [IO.NotifyFilters]'FileName, LastWrite'}) -EventName Changed -SourceIdentifier RunnerDataChanged -Action $action).Name ; while($true) { Start-Sleep -Seconds 5 }"]])
+        local cmd = '"'..base..'/watchexec/watchexec.exe" "-w" "'..table.concat(filenames, '" "-w" "')..'" "echo" "%WATCHEXEC_WRITTEN_PATH%"'
+        local poppet = _M.popenCmd(cmd, base)
 
-        while poppet:read('*l'):sub(1, 17) ~= 'RunnerDataChanged' do
-        end
+        poppet:read("*l")
 
         return poppet
     else

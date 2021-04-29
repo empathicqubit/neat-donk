@@ -7,3 +7,4 @@ crashsave*
 *.lsvs
 config.lua
 *.sfc
+watchexec*

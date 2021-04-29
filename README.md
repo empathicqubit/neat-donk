@@ -45,6 +45,7 @@ If you want a better idea of what's going on with the tile and sprite calculatio
 * [Basic tilemap info from p4plus2/DKC2-disassembly](https://github.com/p4plus2/DKC2-disassembly)
 * [Serpent](https://github.com/pkulchenko/serpent)
 * [LibDeflate](https://github.com/SafeteeWoW/LibDeflate)
+* [watchexec](https://github.com/watchexec/watchexec/blob/main/LICENSE)
 
 ## TODO
 

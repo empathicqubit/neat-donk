@@ -76,7 +76,7 @@ runner.onLoad(function(filename)
     )
 end)
 
-local waiter = util.waitForChange(inputFilePath)
+local waiter = util.startWaiting(inputFilePath)
 
 local function waitLoop()
     if not first then
@@ -89,15 +89,13 @@ local function waitLoop()
 
         print(string.format('Wrote init to output at %d', ts))
 
+
         first = true
     end
 
     print('Waiting for input from master process')
 
-    waiter:read("*a")
-    util.closeCmd(waiter)
-
-    print('Received input from master process')
+    util.finishWaiting(waiter)
 
     local inputData = nil
     local ok = false
@@ -110,6 +108,8 @@ local function waitLoop()
             print("Deserialization error")
         end
     end
+
+    print('Received input from master process')
 
     species = inputData[1]
 
@@ -149,7 +149,7 @@ local function waitLoop()
             local inputFile = io.open(inputFilePath, "w")
             inputFile:close()
 
-            waiter = util.waitForChange(inputFilePath)
+            waiter = util.startWaiting(inputFilePath)
 
             -- Write the result
             local outFile = io.open(outputFilePath, "w")
