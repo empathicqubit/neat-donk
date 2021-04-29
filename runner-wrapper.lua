@@ -67,7 +67,17 @@ return function()
         onSaveHandler = {},
         onLoadHandler = {},
         poppets = {},
+        hostProcess = "lsnes",
     }
+
+    if util.isWin then
+        _M.hostProcess = util.scrapeCmd('*l', 'powershell "(Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$PID).ParentProcessId)).ParentProcessId)").ExecutablePath')
+        if _M.hostProcess == nil or _M.hostProcess == "" then
+            _M.hostProcess = "lsnes-bsnes.exe"
+        end
+    else
+        -- FIXME Linux
+    end
 
     _M.onRenderForm = function(handler)
     end
@@ -89,16 +99,6 @@ return function()
     end
 
     _M.run = function(species, generationIdx, genomeCallback, finishCallback)
-        local hostProcess = "lsnes"
-        if util.isWin then
-            hostProcess = util.scrapeCmd('*l', 'powershell "(Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$((Get-WmiObject Win32_Process -Filter ProcessId=$PID).ParentProcessId)).ParentProcessId)").ExecutablePath')
-            if hostProcess == nil or hostProcess == "" then
-                hostProcess = "lsnes-bsnes.exe"
-            end
-        else
-            -- FIXME Linux
-        end
-
         local inputPrefix = tmpFileName..'_input_'
         local outputPrefix = tmpFileName..'_output_'
         
@@ -118,7 +118,7 @@ return function()
             local outputFileName = outputPrefix..i
             local inputFileName = inputPrefix..i
 
-            message(_M, hostProcess)
+            message(_M, _M.hostProcess)
 
             local settingsDir = nil
             if isWin then
@@ -134,7 +134,7 @@ return function()
 
             local waiter = util.startWaiting(outputFileName)
 
-            local cmd = '"'..hostProcess..'" "--rom='..config.ROM..'" --unpause "--lua='..base..'/runner-process.lua"'
+            local cmd = '"'.._M.hostProcess..'" "--rom='..config.ROM..'" --unpause "--lua='..base..'/runner-process.lua"'
             local poppet = util.popenCmd(cmd, nil, envs)
             table.insert(_M.poppets, poppet)
 

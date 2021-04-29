@@ -76,7 +76,10 @@ runner.onLoad(function(filename)
     )
 end)
 
-local waiter = util.startWaiting(inputFilePath)
+local waiter = nil
+if not isWin then
+    waiter = util.startWaiting(inputFilePath)
+end
 
 local function waitLoop()
     if not first then
@@ -95,7 +98,9 @@ local function waitLoop()
 
     print('Waiting for input from master process')
 
-    util.finishWaiting(waiter)
+    if not isWin then
+        util.finishWaiting(waiter)
+    end
 
     local inputData = nil
     local ok = false
@@ -149,7 +154,9 @@ local function waitLoop()
             local inputFile = io.open(inputFilePath, "w")
             inputFile:close()
 
-            waiter = util.startWaiting(inputFilePath)
+            if not isWin then
+                waiter = util.startWaiting(inputFilePath)
+            end
 
             -- Write the result
             local outFile = io.open(outputFilePath, "w")
