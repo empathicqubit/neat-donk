@@ -144,8 +144,14 @@ local function waitLoop()
                 })
             )
 
+            -- Truncate the input file to reduce the amount of time
+            -- wasted if we reopen it too early
+            local inputFile = io.open(inputFilePath, "w")
+            inputFile:close()
+
             waiter = util.waitForChange(inputFilePath)
 
+            -- Write the result
             local outFile = io.open(outputFilePath, "w")
             outFile:write(table.concat(outContents, "\n"))
             outFile:close()
