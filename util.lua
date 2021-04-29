@@ -99,8 +99,13 @@ function _M.waitForChange(filenames, count, wild)
         local sec, usec = utime()
         print(string.format('Starting watching file at %d', sec * 1000000 + usec))
 
-        return _M.popenCmd([[powershell "$filename = ']]..wild..
-        [[' ; $targetCount = ]]..count..[[ ; $count = 0 ; Register-ObjectEvent (New-Object IO.FileSystemWatcher (Split-Path $filename), (Split-Path -Leaf $filename) -Property @{ IncludeSubdirectories = $false ; NotifyFilter =  [IO.NotifyFilters]'FileName, LastWrite'}) -EventName Changed -SourceIdentifier RunnerDataChanged -Action { $count += 1 ; if ( $count -ge $targetCount ) { [Environment]::Exit(0) } } ; while($true) { Start-Sleep -Milliseconds 1 }"]])
+        local poppet = _M.popenCmd([[powershell "$filename = ']]..wild..
+        [[' ; $targetCount = ]]..count..[[ ; $count = 0 ; $action = { $count += 1 ; if ( $count -ge $targetCount ) { [Environment]::Exit(0) } } ; (Register-ObjectEvent (New-Object IO.FileSystemWatcher (Split-Path $filename), (Split-Path -Leaf $filename) -Property @{ IncludeSubdirectories = $false ; NotifyFilter =  [IO.NotifyFilters]'FileName, LastWrite'}) -EventName Changed -SourceIdentifier RunnerDataChanged -Action $action).Name ; while($true) { Start-Sleep -Seconds 5 }"]])
+
+        while poppet:read('*l'):sub(1, 17) ~= 'RunnerDataChanged' do
+        end
+
+        return poppet
     else
         local watchCmd = ''
         if count == 1 then

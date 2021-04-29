@@ -5,7 +5,9 @@ local util = dofile(base.."/util.lua")
 local serpent = dofile(base.."/serpent.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
 
-local hasThreads = not util.isWin and config.NeatConfig.Threads > 1
+local hasThreads = 
+	not util.isWin and
+		config.NeatConfig.Threads > 1
 local Runner = nil
 if hasThreads then
     Runner = dofile(base.."/runner-wrapper.lua")
