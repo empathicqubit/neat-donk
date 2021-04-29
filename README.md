@@ -16,7 +16,7 @@ See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
 3. Load the DKC2 ROM: `File -> Load -> ROM...`
 4. Load the `neat-donk.lua` script: `Tools -> Run Lua script...`
 5. You may also want to turn off sound since it may get annoying. `Configure -> Sounds enabled`
-6. Look at config.lua for some settings you can change. Not all have been tested, but you should be able to change the number on the `_M.Filename =` line to get a different state file from the `_M.State` list. Also note the `Threads =` line. Change this to 1 to prevent multiple instances of lsnes from getting launched at once. If you use more than 1 thread, you may also want to launch `lsnes` using xpra to manage the windows, with the `xpra-run.sh` script.
+6. Look at config.lua for some settings you can change. Not all have been tested, but you should be able to change the number on the `_M.Filename =` line to get a different state file from the `_M.State` list. Also note the `Threads =` line. Change this to 1 to prevent multiple instances of lsnes from getting launched at once. If you use more than 1 thread, you may also want to launch `lsnes` using xpra to manage the windows, with the `xpra-run.sh` script. Currently Windows does not support multiple threads.
 
 If you want a better idea of what's going on with the tile and sprite calculations you may want to load `donkutil.lua`. It will mark the tiles with their offsets on the screen, give a crosshair with tile measurements (every 32 pixels), and list information about the sprites (you can use the 1 and 2 keys above the letter keys to page through them). Sprites labeled in green are considered "good", red is "bad", normal color is neutral. Solid red means that it's the active sprite in the info viewer.
 

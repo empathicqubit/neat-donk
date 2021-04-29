@@ -116,9 +116,16 @@ return function()
 
             message(_M, hostProcess)
 
+            local settingsDir = nil
+            if isWin then
+                settingsDir = tempDir.."/donk_runner_settings_"..i
+                util.mkdir(settingsDir)
+            end
+
             local envs = {
                 RUNNER_INPUT_FILE = inputFileName,
                 RUNNER_OUTPUT_FILE = outputFileName,
+                APPDATA = settingsDir,
             }
 
             local waiter = util.waitForChange(outputFileName)
@@ -136,7 +143,7 @@ return function()
             table.insert(waiters, outputPrefix..i)
         end
 
-        local waiter = util.waitForChange(waiters, nil, tmpFileName.."output_*")
+        local waiter = util.waitForChange(waiters, nil, tmpFileName.."_output_*")
 
         message(_M, 'Setting up child processes')
 

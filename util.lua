@@ -42,6 +42,16 @@ function _M.doCmd(...)
     return _M.scrapeCmd('*a', ...)
 end
 
+--- Create a directory
+--- @return string dir The directory to create
+function _M.mkdir(dir)
+    if _M.isWin then
+        return _M.doCmd('if not exist "'..dir..'" mkdir "'..dir..'"')
+    else
+        return _M.doCmd("mkdir '"..dir.."'")
+    end
+end
+
 --- Run a command and get the output
 --- @param formats table|string|number List or single io.read() specifier
 --- @return table table List of results based on read specifiers

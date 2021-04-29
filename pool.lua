@@ -1,15 +1,17 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local config = dofile(base.."/config.lua")
+local util = dofile(base.."/util.lua")
+local serpent = dofile(base.."/serpent.lua")
+local libDeflate = dofile(base.."/LibDeflate.lua")
+
+local hasThreads = not util.isWin and config.NeatConfig.Threads > 1
 local Runner = nil
-if config.NeatConfig.Threads > 1 then
+if hasThreads then
     Runner = dofile(base.."/runner-wrapper.lua")
 else
     Runner = dofile(base.."/runner.lua")
 end
-
-local serpent = dofile(base.."/serpent.lua")
-local libDeflate = dofile(base.."/LibDeflate.lua")
 
 local Inputs = config.InputSize+1
 local Outputs = #config.ButtonNames
@@ -683,7 +685,7 @@ local function mainLoop(currentSpecies)
     end
 
     local slice = pool.species[currentSpecies]
-    if config.NeatConfig.Threads > 1 then
+    if hasThreads then
         slice = {}
         for i=currentSpecies, currentSpecies + config.NeatConfig.Threads - 1, 1 do
             if pool.species[i] == nil then
@@ -701,7 +703,7 @@ local function mainLoop(currentSpecies)
             -- Genome callback
         end,
         function()
-            if config.NeatConfig.Threads > 1 then
+            if hasThreads then
                 finished = finished + 1
                 if finished ~= #slice then
                     return
