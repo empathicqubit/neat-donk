@@ -8,3 +8,4 @@ crashsave*
 config.lua
 *.sfc
 watchexec*
+.VSCodeCounter/

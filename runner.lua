@@ -387,7 +387,11 @@ local function initializeRun(_M, after)
     settings.set_speed("turbo")
     -- XXX Does this actually work or only affects new VM loads?
     settings.set('lua-maxmem', 1024)
-    exec('enable-sound off')
+    local enableSound = 'on'
+    if config.NeatConfig.DisableSound then
+        enableSound = 'off'
+    end
+    exec('enable-sound '..enableSound)
     gui.subframe_update(false)
     table.insert(_M.runInitialized, after)
     movie.unsafe_rewind(rew)
