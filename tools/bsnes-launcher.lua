@@ -33,6 +33,18 @@ For example, --sprite-x:r would match any reads of any sprite X position
 --sprite-x>10:w would match any writes of any sprite X position greater 
 than 0x10 (16). Omitting the rwx will create the breakpoints with the values
 specified but they will not trigger until you enable them manually.
+
+Example:
+    Matching values of the goalpost sprites in Pirate Panic:
+
+        LSNES_HIDE_MESSAGES=1 \
+        LSNES_HIDE_STATUSPANEL=1 \
+        BSNES_LAUNCHER_ARGS='--sprite-control=160:w --sprite-control=164:w --sprite-control=16c:w --sprite-control=168:w --sprite-x=1c3c:w --sprite-x=1c48:w --sprite-x=1c5d:w --sprite-y=ff63:w --sprite-y=ff8f:w' \
+        lsnes --lua=tools/bsnes-launcher.lua
+
+    Note that ff is included in some values since bsnes-plus can only match one
+    byte at a time, so sometimes has false positives on those bytes since the true
+    value is not unique enough.
 ]])
 end
 
