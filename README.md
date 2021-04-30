@@ -19,10 +19,6 @@ See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
 5. You may also want to turn off sound since it may get annoying. `Configure -> Sounds enabled`
 6. Look at config.lua for some settings you can change. Not all have been tested, but you should be able to change the number on the `_M.Filename =` line to get a different state file from the `_M.State` list. Also note the `Threads =` line. Change this to 1 to prevent multiple instances of lsnes from getting launched at once. If you use more than 1 thread, you may also want to launch `lsnes` using xpra to manage the windows, with the `xpra-run.sh` script. Currently Windows does not support multiple threads.
 
-If you want a better idea of what's going on with the tile and sprite calculations you may want to load `donkutil.lua`. It will mark the tiles with their offsets on the screen, give a crosshair with tile measurements (every 32 pixels), and list information about the sprites (you can use the 1 and 2 keys above the letter keys to page through them). Sprites labeled in green are considered "good", red is "bad", normal color is neutral. Solid red means that it's the active sprite in the info viewer.
-
-<img src="https://github.com/empathicqubit/neat-donk/blob/master/doc/donkutil.png?raw=true" />
-
 ## Keys
 1: Stop/start
 
@@ -33,6 +29,18 @@ If you want a better idea of what's going on with the tile and sprite calculatio
 8: Load the pool file
 
 9: Restart
+
+## Other Tools
+
+### Status Overlay
+
+The status overlay is located at [tools/status-overlay.lua](tools/status-overlay.lua). It will help you see the tile and sprite calculations by marking the tiles with their offsets on the screen, giving a crosshair with tile measurements (every 32 pixels), and listing information about the sprites (you can use the 1 and 2 keys above the letter keys to page through them). Sprites labeled in green are considered "good", red is "bad", normal color is neutral. Solid red means that it's the active sprite in the info viewer.
+
+### BSNES Launcher
+
+Located at [tools/bsnes-launcher.lua](tools/bsnes-launcher.lua), this script gives you an easy way to launch bsnes-plus with breakpoints preset. Run it in lsnes and it will display a message to the Lua console and stderr on how to use it.
+
+<img src="https://github.com/empathicqubit/neat-donk/blob/master/doc/donkutil.png?raw=true" />
 
 ## Notes
 * Only tested on Pirate Panic
