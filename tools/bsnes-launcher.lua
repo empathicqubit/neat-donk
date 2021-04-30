@@ -39,7 +39,7 @@ Example:
 
         LSNES_HIDE_MESSAGES=1 \
         LSNES_HIDE_STATUSPANEL=1 \
-        BSNES_LAUNCHER_ARGS='--sprite-control=160:w --sprite-control=164:w --sprite-control=16c:w --sprite-control=168:w --sprite-x=1c3c:w --sprite-x=1c48:w --sprite-x=1c5d:w --sprite-y=ff63:w --sprite-y=ff8f:w' \
+        BSNES_LAUNCHER_ARGS='--sprite-startindex=2 --sprite-control=160:w --sprite-control=164:w --sprite-control=16c:w --sprite-control=168:w --sprite-x=1c3c:w --sprite-x=1c48:w --sprite-x=1c5d:w --sprite-y=ff63:w --sprite-y=ff8f:w' \
         lsnes --lua=tools/bsnes-launcher.lua
 
     Note that ff is included in some values since bsnes-plus can only match one
