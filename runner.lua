@@ -83,6 +83,18 @@ local function displayGenome(genome)
 			if gene.enabled then
 				local c1 = cells[gene.into]
 				local c2 = cells[gene.out]
+                if c1 == nil then
+                    c1 = {
+                        x = 0,
+                        y = 0,
+                    }
+                end
+                if c2 == nil then
+                    c2 = {
+                        x = 0,
+                        y = 0,
+                    }
+                end
 				if gene.into > Inputs and gene.into <= config.NeatConfig.MaxNodes then
 					c1.x = 0.75*c1.x + 0.25*c2.x
 					if c1.x >= c2.x then
@@ -149,6 +161,18 @@ local function displayGenome(genome)
 		if true then
 			local c1 = cells[gene.into]
 			local c2 = cells[gene.out]
+            if(c1 == nil) then
+                c1 = {
+                    x = 0,
+                    y = 0,
+                }
+            end
+            if(c2 == nil) then
+                c2 = {
+                    x = 0,
+                    y = 0,
+                }
+            end
 			local alpha = 0x20000000
 			if c1.value == 0 then
 				alpha = 0xA0000000
@@ -408,11 +432,11 @@ local function mainLoop(_M, genome)
         genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
 
         if _M.drawFrame % 10 == 0 then
-            if not pcall(function()
+            --if not pcall(function()
                 displayGenome(genome)
-            end) then
-            message(_M, "Could not render genome graph", 0x00990000)
-            end
+            --end) then
+            --message(_M, "Could not render genome graph", 0x00990000)
+            --end
         end
         
         if _M.currentFrame%5 == 0 then

@@ -14,6 +14,8 @@ local function help()
     text([[
 Syntax: BSNES_LAUNCHER_ARGS='<arguments>' lsnes --lua=]]..base..[[/bsnes-launcher.lua
 
+--sprite-startindex=<number>    Which sprite to start at. Can be a value from 0-22
+
 Sprite breakpoint arguments:
 These will create breakpoints for all sprite slots with properties matching the
 given pattern.
@@ -94,10 +96,14 @@ local function bpSwitch(switchName, source, startAddress, arg, valWidth, addrWid
 end
 
 local count = 0
+local startIndex = 0
 for arg in os.getenv('BSNES_LAUNCHER_ARGS'):gmatch('[^ ]+') do
+    if arg:sub(1,20) == '--sprite-startindex=' then
+        startIndex = tonumber(arg:sub(21))
+    end
     count = count + 1
     for propName,offset in pairs(mem.offset.sprite) do
-        for i=0,22,1 do
+        for i=startIndex,22,1 do
             local startAddress = mem.addr.spriteBase + mem.size.sprite * i + offset
             bpSwitch('sprite-'..propName, 'cpu', startAddress, arg)
         end
