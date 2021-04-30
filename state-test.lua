@@ -1,9 +1,5 @@
-local errtest = io.popen("farts", 'r')
-errtest:read("*a")
-print(errtest:close())
-errtest = io.popen("dir", 'r')
-errtest:read("*a")
-local ok, exit, code = errtest:close()
-print(ok)
-print(exit)
-print(code)
+local classes = _SYSTEM.all_classes()
+io.stderr:write(classes:gsub(classes:sub(8,1), '\n'))
+for k,v in pairs(_SYSTEM) do
+    print(k)
+end
