@@ -36,11 +36,11 @@ See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
 
 The status overlay is located at [tools/status-overlay.lua](tools/status-overlay.lua). It will help you see the tile and sprite calculations by marking the tiles with their offsets on the screen, giving a crosshair with tile measurements (every 32 pixels), and listing information about the sprites (you can use the 1 and 2 keys above the letter keys to page through them). Sprites labeled in green are considered "good", red is "bad", normal color is neutral. Solid red means that it's the active sprite in the info viewer.
 
+<img src="https://github.com/empathicqubit/neat-donk/blob/master/doc/donkutil.png?raw=true" />
+
 ### BSNES Launcher
 
 Located at [tools/bsnes-launcher.lua](tools/bsnes-launcher.lua), this script gives you an easy way to launch bsnes-plus with breakpoints preset. Run it in lsnes and it will display a message to the Lua console and stderr on how to use it.
-
-<img src="https://github.com/empathicqubit/neat-donk/blob/master/doc/donkutil.png?raw=true" />
 
 ## Notes
 * Only tested on Pirate Panic

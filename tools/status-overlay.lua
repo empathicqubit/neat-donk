@@ -1,4 +1,4 @@
-local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1").."/.."
 
 local set_timer_timeout, memory, memory2, gui, input, bit = set_timer_timeout, memory, memory2, gui, input, bit
 
