@@ -6,6 +6,7 @@ crashsave*
 *.pool*
 *.lsvs
 config.lua
+*.srm
 *.sfc
 watchexec*
 .VSCodeCounter/

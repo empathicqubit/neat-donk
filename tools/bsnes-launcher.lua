@@ -51,7 +51,7 @@ local function bpSwitch(switchName, source, startAddress, arg, valWidth, addrWid
         valWidth = 2
     end
     if arg:sub(1, #switchName+2) == '--'..switchName then
-        local op, valHex, rwx = arg:sub(#switchName+3):match('([><=]*)([0-9a-fA-F]*):?([rwxRWX]*)$')
+        local op, valHex, rwx = arg:sub(#switchName+3):match('^([><=]*)([0-9a-fA-F]*):?([rwxRWX]*)$')
         local valPad = ''
         if valHex ~= '' then
             local val = tonumber(valHex, 16)
@@ -62,13 +62,16 @@ local function bpSwitch(switchName, source, startAddress, arg, valWidth, addrWid
             -- SNES is LE!
             local valLeast = valPad:sub(3, 4)
             local valMost = valPad:sub(1, 2)
-            local opLeast = '='
-            local opMost = '='
+            local opLeast = ''
+            local opMost = ''
 
             -- FIXME This is surely wrong but better than nothing?
             if op == '>' then
                 opLeast = '>'
                 opMost = '>='
+            elseif op == '=' then
+                opLeast = '='
+                opMost = '='
             elseif op == '<' then
                 opLeast = '<'
                 opMost = '<='
@@ -79,8 +82,6 @@ local function bpSwitch(switchName, source, startAddress, arg, valWidth, addrWid
                 opLeast = '>='
                 opMost = '>='
             else
-                opLeast = ''
-                opMost = ''
                 valLeast = ''
                 valMost = ''
             end
@@ -103,12 +104,14 @@ for arg in os.getenv('BSNES_LAUNCHER_ARGS'):gmatch('[^ ]+') do
     end
 end
 
+local cmdFmt = 'bsnes %s--show-debugger "%s"'
+
 local bpArgs = ''
+local withoutBps = string.format(cmdFmt, bpArgs, config.ROM)
 if #bps > 0 then
     bpArgs = '-b "'..table.concat(bps, '" -b "')..'" '
 end
-
-local cmd = 'bsnes '..bpArgs..'--show-debugger --break-immediately "'..config.ROM..'"'
+local withBps = string.format(cmdFmt, bpArgs, config.ROM)
 
 if count == 0 then
     text('====================')
@@ -119,7 +122,12 @@ text('====================')
 
 text('Note that you will need to turn off breakpoint saving for this app to work correctly.')
 text('')
-text(cmd)
+text(withBps)
 text('====================')
 
-util.doCmd(cmd)
+while true do
+    text('Starting without breakpoints first. Save your state where you want with F2, then quit to load with breakpoints enabled')
+    util.doCmd(withoutBps)
+    text('Starting with breakpoints enabled. Load your state with F4')
+    util.doCmd(withBps)
+end
