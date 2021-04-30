@@ -24,7 +24,7 @@ local FG_COLOR = 0x00ffffff
 local BG_COLOR = 0x99000000
 local TILE_RADIUS = 5
 
-local count = 0
+local frame = 0
 local detailsidx = -1
 local jumping = false
 local helddown = false
@@ -202,10 +202,11 @@ local function sprite_details(idx)
     text(0, 0, "Sprite "..idx..(locked and " (Locked)" or "")..":\n\n"..util.table_to_string(sprite))
 end
 
-function on_paint (not_synth)
-    count = count + 1
-
-    local guiWidth, guiHeight = gui.resolution()
+local overlayCtx = nil
+local overlay = nil
+local function renderOverlay(guiWidth, guiHeight)
+    overlayCtx:set()
+    overlayCtx:clear()
 
     if showhelp then
         text(0, 0, [[
@@ -395,6 +396,24 @@ Current area: %04x
     end
 
     text(guiWidth - 125, 20, "Help [Hold 0]")
+
+	overlay = overlayCtx:render()
+    gui.renderctx.setnull()
+end
+
+function on_paint (not_synth)
+    frame = frame + 1
+
+    local guiWidth, guiHeight = gui.resolution()
+    if overlayCtx == nil then
+        overlayCtx = gui.renderctx.new(guiWidth, guiHeight)
+    end
+
+    if frame % 3 == 0 then
+        renderOverlay(guiWidth, guiHeight)
+    end
+
+    overlay:draw(0, 0)
 end
 
 function on_timer()
