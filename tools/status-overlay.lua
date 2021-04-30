@@ -226,6 +226,8 @@ Sprite Details:
 [8] Enable / Disable stage tile rulers
 [9] Enable / Disable hidden tiles
 ]])
+        overlay = overlayCtx:render()
+        gui.renderctx.setnull()
         return
     end
 
@@ -413,7 +415,9 @@ function on_paint (not_synth)
         renderOverlay(guiWidth, guiHeight)
     end
 
-    overlay:draw(0, 0)
+    if overlay ~= nil then
+        overlay:draw(0, 0)
+    end
 end
 
 function on_timer()
