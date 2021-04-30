@@ -1,3 +1,5 @@
+local gui, input, movie, settings, exec, callback, set_timer_timeout = gui, input, movie, settings, exec, callback, set_timer_timeout
+
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local config = dofile(base.."/config.lua")
@@ -302,7 +304,7 @@ local function painting(_M)
     displayForm(_M)
 end
 
-local function evaluateNetwork(network, inputs, inputDeltas)
+local function evaluateNetwork(_M, network, inputs, inputDeltas)
 	table.insert(inputs, 1)
 	table.insert(inputDeltas,99)
 	if #inputs ~= Inputs then
@@ -353,7 +355,7 @@ local function evaluateCurrent(_M)
 	local inputDeltas = {}
 	inputs, inputDeltas = game.getInputs()
 
-	controller = evaluateNetwork(genome.network, inputs, inputDeltas)
+	controller = evaluateNetwork(_M, genome.network, inputs, inputDeltas)
 
 	if controller[6] and controller[7] then
 		controller[6] = false
@@ -720,6 +722,7 @@ local function keyhook (_M, key, state)
             _M.helddown = key
             config.Running = not config.Running
         elseif key == "4" then
+            -- FIXME Should be handled similarly to other events
             _M.helddown = key
             pool.requestTop()
         elseif key == "6" then
@@ -729,6 +732,7 @@ local function keyhook (_M, key, state)
             _M.helddown = key
             load(_M)
         elseif key == "9" then
+            -- FIXME Event inversion
             _M.helddown = key
             pool.run(true)
         end

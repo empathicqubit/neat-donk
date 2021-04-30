@@ -1,10 +1,13 @@
 --Notes here
+local memory, bit, memory2, input = memory, bit, memory2, input
+
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local config = dofile(base.."/config.lua")
 local spritelist = dofile(base.."/spritelist.lua")
 local util = dofile(base.."/util.lua")
+local mem = dofile(base.."/mem.lua")
 local _M = {
     leader = 0,
     tilePtr = 0,
@@ -22,37 +25,15 @@ local _M = {
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
 
-local KREMCOINS = 0x7e08cc
-local TILE_SIZE = 32
-local ENEMY_SIZE = 64
-local TILE_COLLISION_MATH_POINTER = 0x7e17b2
-local SPRITE_BASE = 0x7e0de2
-local SPRITE_SIZE = 94
-local SPRITE_DYING = 0x1000
-local VERTICAL_POINTER = 0xc414
-local TILEDATA_POINTER = 0x7e0098
-local HAVE_BOTH = 0x7e08c2
-local CAMERA_X = 0x7e17ba
-local CAMERA_Y = 0x7e17c0
-local LEAD_CHAR = 0x7e08a4
-local PARTY_X = 0x7e0a2a
-local PARTY_Y = 0x7e0a2c
-local SOLID_LESS_THAN = 0x7e00a0
-local KONG_LETTERS = 0x7e0902
-local MATH_LIVES = 0x7e08be
-local DISPLAY_LIVES = 0x7e0c0
-local MAIN_AREA_NUMBER = 0x7e08a8
-local CURRENT_AREA_NUMBER = 0x7e08c8
-
 function _M.getPositions()
-    _M.leader = memory.readword(LEAD_CHAR)
-    _M.tilePtr = memory.readhword(TILEDATA_POINTER)
-    _M.vertical = memory.readword(TILE_COLLISION_MATH_POINTER) == VERTICAL_POINTER
-	_M.partyX = memory.readword(PARTY_X)
-	_M.partyY = memory.readword(PARTY_Y)
+    _M.leader = memory.readword(mem.addr.leadChar)
+    _M.tilePtr = memory.readhword(mem.addr.tiledataPointer)
+    _M.vertical = memory.readword(mem.addr.tileCollisionMathPointer) == mem.addr.verticalPointer
+	_M.partyX = memory.readword(mem.addr.partyX)
+	_M.partyY = memory.readword(mem.addr.partyY)
 		
-	_M.cameraX = memory.readword(CAMERA_X)
-	_M.cameraY = memory.readword(CAMERA_Y)
+	_M.cameraX = memory.readword(mem.addr.cameraX)
+	_M.cameraY = memory.readword(mem.addr.cameraY)
 		
 	_M.screenX = (_M.partyX-256-_M.cameraX)*2
 	_M.screenY = (_M.partyY-256-_M.cameraY)*2
@@ -69,7 +50,7 @@ function _M.getCoins()
 end
 
 function _M.getKremCoins()
-    local krem = memory.readword(KREMCOINS)
+    local krem = memory.readword(mem.addr.kremcoins)
     return krem
 end
 
@@ -91,7 +72,7 @@ function _M.getGoalHit()
 end
 
 function _M.getKong()
-    local kong = memory.readword(KONG_LETTERS)
+    local kong = memory.readword(mem.addr.kongLetters)
     return bit.popcount(kong)
 end
 
@@ -107,7 +88,7 @@ end
 
 function _M.getBoth()
     -- FIXME consider invincibility barrels
-    local both = memory.readword(HAVE_BOTH)
+    local both = memory.readword(mem.addr.haveBoth)
 	return bit.band(both, 0x4000)
 end
 
@@ -132,13 +113,12 @@ function _M.writePowerup(powerup)
 	-- memory.writebyte(0x0019, powerup)
 end
 
-
 function _M.getHit(alreadyHit)
-        return not alreadyHit and memory.readword(MATH_LIVES) < memory.readword(DISPLAY_LIVES)
+        return not alreadyHit and memory.readword(mem.addr.mathLives) < memory.readword(mem.addr.displayLives)
 end
 
 function _M.getHitTimer(lastBoth)
-	return (memory.readsbyte(DISPLAY_LIVES) - memory.readsbyte(MATH_LIVES))
+	return (memory.readsbyte(mem.addr.displayLives) - memory.readsbyte(mem.addr.mathLives))
         + lastBoth - _M.getBoth()
 end
 
@@ -180,10 +160,6 @@ function _M.tileIsSolid(x, y, tileVal, tileOffset)
         return false
     end
 
-    if questionable_tiles then
-        return true
-    end
-
     local a2 = bit.band(x, 0x1f)
 
     if bit.band(tileVal, 0x4000) ~= 0 then
@@ -192,7 +168,7 @@ function _M.tileIsSolid(x, y, tileVal, tileOffset)
 
     tileVal = bit.band(tileVal, 0x3fff)
 
-    local solidLessThan = memory.readword(SOLID_LESS_THAN)
+    local solidLessThan = memory.readword(mem.addr.solidLessThan)
 
     if tileVal >= solidLessThan then
         return false
@@ -228,8 +204,8 @@ function _M.tileIsSolid(x, y, tileVal, tileOffset)
 end
 
 function _M.getTile(dx, dy)
-    local tileX = math.floor((_M.partyX + dx * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
-    local tileY = math.floor((_M.partyY + dy * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
+    local tileX = math.floor((_M.partyX + dx * mem.size.tile) / mem.size.tile) * mem.size.tile
+    local tileY = math.floor((_M.partyY + dy * mem.size.tile) / mem.size.tile) * mem.size.tile
 
     local offset = _M.tileOffsetCalculation(tileX, tileY, _M.vertical)
 
@@ -243,7 +219,7 @@ function _M.getTile(dx, dy)
 end
 
 function _M.getCurrentArea()
-    return memory.readword(CURRENT_AREA_NUMBER)
+    return memory.readword(mem.addr.currentAreaNumber)
 end
 
 function _M.getJumpHeight()
@@ -255,27 +231,28 @@ function _M.getJumpHeight()
 end
 
 function _M.getSprite(idx)
-    local base_addr = idx * SPRITE_SIZE + SPRITE_BASE
+    local base_addr = idx * mem.size.sprite + mem.addr.spriteBase
 
-    local control = memory.readword(base_addr)
+    local offsets = mem.offset.sprite
+    local control = memory.readword(base_addr + offsets.control)
 
     if control == 0 then
         return nil
     end
 
-    local x = memory.readword(base_addr + 0x06)
-    local y = memory.readword(base_addr + 0x0a)
+    local x = memory.readword(base_addr + offsets.x)
+    local y = memory.readword(base_addr + offsets.y)
     local sprite = {
         control = control,
         screenX = x - 256 - _M.cameraX - 256,
         screenY = y - 256 - _M.cameraY - 256,
-        jumpHeight = memory.readword(base_addr + 0x0e),
+        jumpHeight = memory.readword(base_addr + offsets.jumpHeight),
         -- style bits
         -- 0x4000 0: Right facing 1: Flipped
         -- 0x1000 0: Alive 1: Dying
-        style = memory.readword(base_addr + 0x12),
-        velocityX = memory.readsword(base_addr + 0x20),
-        velocityY = memory.readsword(base_addr + 0x24),
+        style = memory.readword(base_addr + offsets.style),
+        velocityX = memory.readsword(base_addr + offsets.velocityX),
+        velocityY = memory.readsword(base_addr + offsets.velocityY),
         x = x,
         y = y,
         good = spritelist.Sprites[control]
@@ -328,15 +305,15 @@ function _M.getExtendedSprites()
         end
 
         -- Hide the interface icons
-        if screenSprite.x < 0 or screenSprite.y < TILE_SIZE then
+        if screenSprite.x < 0 or screenSprite.y < mem.size.tile then
             goto continue
         end
 
         -- Hide sprites near computed sprites
         for s=1,#sprites,1 do
             local sprite = sprites[s]
-            if screenSprite.x > sprite.screenX - ENEMY_SIZE and screenSprite.x < sprite.screenX + ENEMY_SIZE / 2 and
-                screenSprite.y > sprite.screenY - ENEMY_SIZE and screenSprite.y < sprite.screenY then
+            if screenSprite.x > sprite.screenX - mem.size.enemy and screenSprite.x < sprite.screenX + mem.size.enemy / 2 and
+                screenSprite.y > sprite.screenY - mem.size.enemy and screenSprite.y < sprite.screenY then
                 goto continue
             end
             ::nextsprite::
@@ -363,7 +340,7 @@ function _M.getInputs()
 			inputs[#inputs+1] = 0
 			inputDeltaDistance[#inputDeltaDistance+1] = 1
 			
-			tile = _M.getTile(dx, dy)
+			local tile = _M.getTile(dx, dy)
 			if tile == 1 then
                 if _M.getTile(dx, dy-1) == 1 then
                     inputs[#inputs] = -1
@@ -376,13 +353,13 @@ function _M.getInputs()
 			
 			for i = 1,#sprites do
                 local sprite = sprites[i]
-				local distx = math.abs(sprite.x - (_M.partyX+dx*TILE_SIZE))
-				local disty = math.abs(sprite.y - (_M.partyY+dy*TILE_SIZE))
+				local distx = math.abs(sprite.x - (_M.partyX+dx*mem.size.tile))
+				local disty = math.abs(sprite.y - (_M.partyY+dy*mem.size.tile))
                 local dist = math.sqrt((distx * distx) + (disty * disty))
-				if dist <= TILE_SIZE * 1.25 then
+				if dist <= mem.size.tile * 1.25 then
 					inputs[#inputs] = sprite.good
 					
-					if dist > TILE_SIZE then
+					if dist > mem.size.tile then
 						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
 					end
 				end
@@ -390,13 +367,13 @@ function _M.getInputs()
 			end
 
  			for i = 1,#extended do
-				local distx = math.abs(extended[i]["x"]+_M.cameraX - (_M.partyX+dx*TILE_SIZE))
-				local disty = math.abs(extended[i]["y"]+_M.cameraY - (_M.partyY+dy*TILE_SIZE))
-				if distx < TILE_SIZE / 2 and disty < TILE_SIZE / 2 then
+				local distx = math.abs(extended[i]["x"]+_M.cameraX - (_M.partyX+dx*mem.size.tile))
+				local disty = math.abs(extended[i]["y"]+_M.cameraY - (_M.partyY+dy*mem.size.tile))
+				if distx < mem.size.tile / 2 and disty < mem.size.tile / 2 then
 					
 					inputs[#inputs] = extended[i]["good"]
 					local dist = math.sqrt((distx * distx) + (disty * disty))
-					if dist > TILE_SIZE / 2 then
+					if dist > mem.size.tile / 2 then
 						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
 					end
 				end
@@ -432,7 +409,7 @@ function _M.onEmptyHit(handler)
 end
 
 local function processEmptyHit(addr, val)
-    local idx = math.floor((bit.band(addr, 0xffff) - bit.band(SPRITE_BASE, 0xffff)) / SPRITE_SIZE)
+    local idx = math.floor((bit.band(addr, 0xffff) - bit.band(mem.addr.spriteBase, 0xffff)) / mem.size.sprite)
     local pow = _M.getSprite(idx)
     if pow == nil or
         pow.control ~= 0x0238 then
@@ -442,7 +419,7 @@ local function processEmptyHit(addr, val)
     local sprites = _M.getSprites()
     for i=1,#sprites,1 do
         local sprite = sprites[i]
-        if bit.band(sprite.style, SPRITE_DYING) ~= 0 and
+        if bit.band(sprite.style, mem.flag.sprite.dying) ~= 0 and
             sprite.good == -1 then
             return
         end
@@ -487,7 +464,7 @@ function _M.registerHandlers()
     registerHandler(memory2.BUS, 'registerwrite', 0xb517b2, processAreaLoad)
     registerHandler(memory2.WRAM, 'registerread', 0x06b1, processMapLoad)
     for i=2,22,1 do
-        registerHandler(memory2.WRAM, 'registerwrite', bit.band(SPRITE_BASE + SPRITE_SIZE * i, 0xffff), processEmptyHit)
+        registerHandler(memory2.WRAM, 'registerwrite', bit.band(mem.addr.spriteBase + mem.size.sprite * i, 0xffff), processEmptyHit)
     end
 end
 

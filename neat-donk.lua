@@ -1,4 +1,5 @@
 --Update to Seth-Bling's MarI/O app
+local gui = gui
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 

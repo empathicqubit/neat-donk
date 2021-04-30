@@ -1,6 +1,9 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local set_timer_timeout, memory, memory2, gui, input, bit = memory, memory2, gui, input, bit, set_timer_timeout
+
 local util = dofile(base.."/util.lua")
+local mem = dofile(base.."/mem.lua")
 local spritelist = dofile(base.."/spritelist.lua")
 local game = dofile(base.."/game.lua")
 local config = dofile(base.."/config.lua")
@@ -8,45 +11,32 @@ local config = dofile(base.."/config.lua")
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
 
-FG_COLOR = 0x00ffffff
-BG_COLOR = 0x99000000
-ENEMY_SIZE = 64
-TILEDATA_POINTER = 0x7e0098
-TILE_SIZE = 32
-TILE_RADIUS = 5
-SPRITE_BASE = 0x7e0de2
-SOLID_LESS_THAN = 0x7e00a0
-DIDDY_X_VELOCITY = 0x7e0e02
-DIDDY_Y_VELOCITY = 0x7e0e06
-DIXIE_X_VELOCITY = 0x7e0e60
-DIXIE_Y_VELOCITY = 0x7e0e64
-STAGE_NUMBER = 0x7e08a8
-STAGE_NUMBER_MOVEMENT = 0x7e08c8
-CAMERA_X = 0x7e17ba
-CAMERA_Y = 0x7e17c0
-CAMERA_MODE = 0x7e054f
-TILE_COLLISION_MATH_POINTER = 0x7e17b2
-VERTICAL_POINTER = 0xc414
-PARTY_X = 0x7e0a2a
-PARTY_Y = 0x7e0a2c
+local CAMERA_MODE = 0x7e054f
+local DIDDY_X_VELOCITY = 0x7e0e02
+local DIDDY_Y_VELOCITY = 0x7e0e06
+local DIXIE_X_VELOCITY = 0x7e0e60
+local DIXIE_Y_VELOCITY = 0x7e0e64
+local FG_COLOR = 0x00ffffff
+local BG_COLOR = 0x99000000
+local TILE_RADIUS = 5
 
-count = 0
-detailsidx = -1
-jumping = false
-helddown = false
-floatmode = false
-rulers = true
-pokemon = false
-pokecount = 0
-showhelp = false
-locked = false
-lockdata = nil
-incsprite = 0
-questionable_tiles = false
+local count = 0
+local detailsidx = -1
+local jumping = false
+local helddown = false
+local floatmode = false
+local rulers = true
+local pokemon = false
+local pokecount = 0
+local showhelp = false
+local locked = false
+local lockdata = nil
+local incsprite = 0
+local questionable_tiles = false
 
-font = gui.font.load(base.."font.font")
+local font = gui.font.load(base.."font.font")
 
-function text(x, y, msg, fg, bg)
+local function text(x, y, msg, fg, bg)
     if fg == nil then
         fg = FG_COLOR
     end
@@ -136,26 +126,27 @@ function on_input (subframe)
     end
 end
 
-function get_sprite(base_addr)
-    local cameraX = memory.readword(CAMERA_X) - 256
-    local cameraY = memory.readword(CAMERA_Y) - 256
-    local x = memory.readword(base_addr + 0x06)
-    local y = memory.readword(base_addr + 0x0a)
+local function get_sprite(base_addr)
+    local offsets = mem.offset.sprite
+    local cameraX = memory.readword(mem.addr.cameraX) - 256
+    local cameraY = memory.readword(mem.addr.cameraY) - 256
+    local x = memory.readword(base_addr + offsets.x)
+    local y = memory.readword(base_addr + offsets.y)
     return {
         base_addr = string.format("%04x", base_addr),
         screenX = x - 256 - cameraX,
-        screenY = y - 256 - cameraY - TILE_SIZE / 3,
-        control = memory.readword(base_addr),
+        screenY = y - 256 - cameraY - mem.size.tile / 3,
+        control = memory.readword(base_addr + offsets.control),
         draworder = memory.readword(base_addr + 0x02),
         x = x,
         y = y,
-        jumpheight = memory.readword(base_addr + 0x0e),
-        style = memory.readword(base_addr + 0x12),
+        jumpHeight = memory.readword(base_addr + offsets.jumpHeight),
+        style = memory.readword(base_addr + offsets.style),
         currentframe = memory.readword(base_addr + 0x18),
         nextframe = memory.readword(base_addr + 0x1a),
         state = memory.readword(base_addr + 0x1e),
-        velox = memory.readsword(base_addr + 0x20),
-        veloy = memory.readsword(base_addr + 0x24),
+        velocityX = memory.readsword(base_addr + offsets.velocityX),
+        velocityY = memory.readsword(base_addr + offsets.velocityY),
         velomaxx = memory.readsword(base_addr + 0x26),
         velomaxy = memory.readsword(base_addr + 0x2a),
         motion = memory.readword(base_addr + 0x2e),
@@ -176,8 +167,8 @@ function get_sprite(base_addr)
     }
 end
 
-function sprite_details(idx)
-    local base_addr = idx * 94 + SPRITE_BASE
+local function sprite_details(idx)
+    local base_addr = idx * mem.size.sprite + mem.addr.spriteBase
 
     local sprite = get_sprite(base_addr)
 
@@ -197,11 +188,11 @@ function sprite_details(idx)
     end
 
     if locked and lockdata == nil then
-        lockdata = memory.readregion(base_addr, 94)
+        lockdata = memory.readregion(base_addr, mem.size.sprite)
     end
 
     if lockdata ~= nil and locked then
-        memory.writeregion(base_addr, 94, lockdata)
+        memory.writeregion(base_addr, mem.size.sprite, lockdata)
     end
 
     text(0, 0, "Sprite "..idx..(locked and " (Locked)" or "")..":\n\n"..util.table_to_string(sprite))
@@ -256,26 +247,26 @@ Sprite Details:
         "Up"
     }
 
-    local cameraX = memory.readword(CAMERA_X) - 256
-    local cameraY = memory.readword(CAMERA_Y) - 256
+    local cameraX = memory.readword(mem.addr.cameraX) - 256
+    local cameraY = memory.readword(mem.addr.cameraY) - 256
     local cameraDir = memory.readbyte(CAMERA_MODE)
 
     local direction = directions[cameraDir+1]
 
-    local vertical = memory.readword(TILE_COLLISION_MATH_POINTER) == VERTICAL_POINTER
+    local vertical = memory.readword(mem.addr.tileCollisionMathPointer) == mem.addr.verticalPointer
 
-    local partyX = memory.readword(PARTY_X)
-    local partyY = memory.readword(PARTY_Y)
+    local partyX = memory.readword(mem.addr.partyX)
+    local partyY = memory.readword(mem.addr.partyY)
     local partyTileOffset = game.tileOffsetCalculation(partyX, partyY, vertical)
 
     local stats = string.format([[
 %s camera %d,%d
 Vertical: %s
 Tile offset: %04x
-Stage number: %04x
-Stage (movement): %04x
+Main area: %04x
+Current area: %04x
 %s
-]], direction, cameraX, cameraY, vertical, partyTileOffset, memory.readword(STAGE_NUMBER), memory.readword(STAGE_NUMBER_MOVEMENT), util.table_to_string(game.getInputs()):gsub("[\\{\\},\n\"]", ""):gsub("-1", "X"):gsub("0", "."):gsub("1", "O"):gsub("(.............)", "%1\n"))
+]], direction, cameraX, cameraY, vertical, partyTileOffset, memory.readword(mem.addr.mainAreaNumber), memory.readword(mem.addr.currentAreaNumber), util.table_to_string(game.getInputs()):gsub("[\\{\\},\n\"]", ""):gsub("-1", "X"):gsub("0", "."):gsub("1", "O"):gsub("(.............)", "%1\n"))
 
     text(guiWidth - 125, guiHeight - 200, stats)
 
@@ -283,7 +274,7 @@ Stage (movement): %04x
 
     local sprites = {}
     for idx = 0,22,1 do
-        local base_addr = idx * 94 + SPRITE_BASE
+        local base_addr = idx * mem.size.sprite + mem.addr.spriteBase
 
         local sprite = get_sprite(base_addr)
 
@@ -305,7 +296,7 @@ Stage (movement): %04x
         text(sprite.screenX * 2, sprite.screenY * 2, string.format("%04x, %04x, %04x", sprite.control, sprite.animnum, sprite.attr), FG_COLOR, sprcolor)
 
         local filename = os.getenv("HOME").."/neat-donk/catchem/"..sprite.animnum..","..sprite.attr..".png"
-        if pokemon and spriteScreenX > (guiWidth / 4) and spriteScreenX < (guiWidth / 4) * 3 and spriteScreenY > (guiHeight / 3) and spriteScreenY < guiHeight and not util.file_exists(filename) then
+        if pokemon and sprite.screenX > (guiWidth / 4) and sprite.screenY < (guiWidth / 4) * 3 and sprite.screenY > (guiHeight / 3) and sprite.screenY < guiHeight and not util.file_exists(filename) then
             gui.screenshot(filename)
             pokecount = pokecount + 1
         end
@@ -316,25 +307,25 @@ Stage (movement): %04x
         local halfWidth = math.floor(guiWidth / 2)
         local halfHeight = math.floor(guiHeight / 2)
 
-        local cameraTileX = math.floor(cameraX / TILE_SIZE)
+        local cameraTileX = math.floor(cameraX / mem.size.tile)
         gui.line(0, halfHeight, guiWidth, halfHeight, BG_COLOR)
-        for i = cameraTileX, cameraTileX + guiWidth / TILE_SIZE / 2,1 do
-            text((i * TILE_SIZE - cameraX) * 2, halfHeight, tostring(i), FG_COLOR, BG_COLOR)
+        for i = cameraTileX, cameraTileX + guiWidth / mem.size.tile / 2,1 do
+            text((i * mem.size.tile - cameraX) * 2, halfHeight, tostring(i), FG_COLOR, BG_COLOR)
         end
 
-        local cameraTileY = math.floor(cameraY / TILE_SIZE)
+        local cameraTileY = math.floor(cameraY / mem.size.tile)
         gui.line(halfWidth, 0, halfWidth, guiHeight, BG_COLOR)
-        for i = cameraTileY, cameraTileY + guiHeight / TILE_SIZE / 2,1 do
-            text(halfWidth, (i * TILE_SIZE - cameraY) * 2, tostring(i), FG_COLOR, BG_COLOR)
+        for i = cameraTileY, cameraTileY + guiHeight / mem.size.tile / 2,1 do
+            text(halfWidth, (i * mem.size.tile - cameraY) * 2, tostring(i), FG_COLOR, BG_COLOR)
         end
     end
 
-    local tilePtr = memory.readhword(TILEDATA_POINTER)
+    local tilePtr = memory.readhword(mem.addr.tiledataPointer)
 
     for x = -TILE_RADIUS, TILE_RADIUS, 1 do
         for y = -TILE_RADIUS, TILE_RADIUS, 1 do
-            local tileX = math.floor((partyX + x * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
-            local tileY = math.floor((partyY + y * TILE_SIZE) / TILE_SIZE) * TILE_SIZE
+            local tileX = math.floor((partyX + x * mem.size.tile) / mem.size.tile) * mem.size.tile
+            local tileY = math.floor((partyY + y * mem.size.tile) / mem.size.tile) * mem.size.tile
 
             local offset = game.tileOffsetCalculation(tileX, tileY, vertical)
 
@@ -369,7 +360,7 @@ Stage (movement): %04x
                 flags = oam[idx * 4 + 4],
             }
 
-            if screenSprite.x < 0 or screenSprite.y > guiHeight / 2 or screenSprite.y < TILE_SIZE then
+            if screenSprite.x < 0 or screenSprite.y > guiHeight / 2 or screenSprite.y < mem.size.tile then
                 goto continue
             end
 
@@ -378,8 +369,8 @@ Stage (movement): %04x
                 if sprite.control == 0 then
                     goto nextsprite
                 end
-                if screenSprite.x > sprite.screenX - ENEMY_SIZE and screenSprite.x < sprite.screenX + ENEMY_SIZE / 2 and
-                    screenSprite.y > sprite.screenY - ENEMY_SIZE and screenSprite.y < sprite.screenY then
+                if screenSprite.x > sprite.screenX - mem.size.enemy and screenSprite.x < sprite.screenX + mem.size.enemy / 2 and
+                    screenSprite.y > sprite.screenY - mem.size.enemy and screenSprite.y < sprite.screenY then
                     goto continue
                 end
                 ::nextsprite::

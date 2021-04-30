@@ -1,3 +1,5 @@
+local utime = utime
+
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local _M = {}

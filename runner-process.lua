@@ -1,3 +1,5 @@
+local gui, utime = gui, utime
+
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local Promise = dofile(base.."/promise.lua")
@@ -77,7 +79,7 @@ runner.onLoad(function(filename)
 end)
 
 local waiter = nil
-if not isWin then
+if not util.isWin then
     waiter = util.startWaiting(inputFilePath)
 end
 
@@ -98,7 +100,7 @@ local function waitLoop()
 
     print('Waiting for input from master process')
 
-    if not isWin then
+    if not util.isWin then
         util.finishWaiting(waiter)
     end
 
@@ -154,7 +156,7 @@ local function waitLoop()
             local inputFile = io.open(inputFilePath, "w")
             inputFile:close()
 
-            if not isWin then
+            if not util.isWin then
                 waiter = util.startWaiting(inputFilePath)
             end
 

@@ -658,6 +658,9 @@ runner.onRenderForm(function(form)
 	processRenderForm(form)
 end)
 
+local playTop = nil
+local topRequested = false
+
 local loadRequested = false
 local saveRequested = false
 local function mainLoop(currentSpecies)
@@ -724,8 +727,7 @@ local function mainLoop(currentSpecies)
     )
 end
 
-local topRequested = false
-local function playTop()
+playTop = function()
 	local maxfitness = 0
 	local maxs, maxg
 	for s,species in pairs(pool.species) do

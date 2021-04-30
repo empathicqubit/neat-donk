@@ -1,3 +1,5 @@
+local random = random
+
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local util = dofile(base.."/util.lua")

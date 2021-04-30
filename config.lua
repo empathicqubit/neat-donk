@@ -17,6 +17,7 @@ _M.ROM = _M.ScriptDir .. "/rom.sfc"
 	Rearrange for other savestates. (will be redone soon)
 --]]
 _M.State = {
+    -- W1.1 Pirate Panic
 	"PiratePanic.lsmv",
 	"PiratePanicDitch.lsmv",
 	"PiratePanicKremcoin.lsmv",
