@@ -60,9 +60,11 @@ local function onMessage(_M, handler)
 end
 
 return function()
-    util.downloadFile('https://github.com/watchexec/watchexec/releases/download/1.13.1/watchexec-1.13.1-x86_64-pc-windows-gnu.zip', base..'/watchexec.zip')
-    util.unzip(base..'/watchexec.zip', base)
-    os.rename(base..'watchexec-1.13.1-x86_64-pc-windows-gnu', base..'/watchexec')
+    if util.isWin then
+        util.downloadFile('https://github.com/watchexec/watchexec/releases/download/1.13.1/watchexec-1.13.1-x86_64-pc-windows-gnu.zip', base..'/watchexec.zip')
+        util.unzip(base..'/watchexec.zip', base)
+        os.rename(base..'watchexec-1.13.1-x86_64-pc-windows-gnu', base..'/watchexec')
+    end
 
     local _M = {
         onMessageHandler = {},
