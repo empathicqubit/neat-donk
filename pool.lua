@@ -10,8 +10,16 @@ local hasThreads =
 		config.NeatConfig.Threads > 1
 local Runner = nil
 if hasThreads then
+	local warn = '========== When using threads, the ROM file to use comes from config.lua. Also, you do not need to start any ROM in the parent process.'
+	io.stderr:write(warn)
+	print(warn)
+
     Runner = dofile(base.."/runner-wrapper.lua")
 else
+	local warn = '========== The ROM must already be running when you only have one thread.'
+	io.stderr:write(warn)
+	print(warn)
+
     Runner = dofile(base.."/runner.lua")
 end
 

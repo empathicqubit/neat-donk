@@ -2,6 +2,10 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1").."/.."
 
 local set_timer_timeout, memory, memory2, gui, input, bit = set_timer_timeout, memory, memory2, gui, input, bit
 
+local warn = '========== The ROM must be running before running this script'
+io.stderr:write(warn)
+print(warn)
+
 local util = dofile(base.."/util.lua")
 local mem = dofile(base.."/mem.lua")
 local spritelist = dofile(base.."/spritelist.lua")
