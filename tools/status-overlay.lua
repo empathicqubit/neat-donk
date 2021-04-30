@@ -34,7 +34,7 @@ local lockdata = nil
 local incsprite = 0
 local questionable_tiles = false
 
-local font = gui.font.load(base.."font.font")
+local font = gui.font.load(base.."/font.font")
 
 local function text(x, y, msg, fg, bg)
     if fg == nil then
