@@ -1,6 +1,6 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
-local set_timer_timeout, memory, memory2, gui, input, bit = memory, memory2, gui, input, bit, set_timer_timeout
+local set_timer_timeout, memory, memory2, gui, input, bit = set_timer_timeout, memory, memory2, gui, input, bit, set_timer_timeout
 
 local util = dofile(base.."/util.lua")
 local mem = dofile(base.."/mem.lua")
