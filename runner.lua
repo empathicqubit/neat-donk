@@ -419,7 +419,12 @@ local function rewind()
     return promise
 end
 
+local frame = 0
+local lastFrame = 0 
+
 local function rewound()
+    frame = 0
+    lastFrame = 0
     for i=#rewinds,1,-1 do
         local promise = table.remove(rewinds, i)
         promise:resolve()
@@ -521,10 +526,13 @@ local function initializeRun(_M)
     end)
 end
 
-local frame = 0
-
 local function mainLoop(_M, genome)
     return advanceFrame(_M):next(function()
+        if lastFrame + 1 ~= frame then
+            message(_M, string.format("We missed %d frames", frame - lastFrame), 0x00990000)
+        end
+        lastFrame = frame
+
         if genome ~= nil then
             _M.currentFrame = _M.currentFrame + 1
         end
