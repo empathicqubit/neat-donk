@@ -165,7 +165,7 @@ EOF]]
                 i = i + 1
             end
         else
-            print(poppet:read("*a"))
+            poppet:read("*a")
             _M.closeCmd(poppet)
         end
     end)
