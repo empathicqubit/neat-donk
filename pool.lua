@@ -1,7 +1,17 @@
+local callback, set_timer_timeout = callback, set_timer_timeout
+
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local Promise = dofile(base.."/promise.lua")
+-- Only the parent should manage ticks!
+callback.register('timer', function()
+    Promise.update()
+	set_timer_timeout(1)
+end)
+set_timer_timeout(1)
+
 local config = dofile(base.."/config.lua")
-local util = dofile(base.."/util.lua")
+local util = dofile(base.."/util.lua")(Promise)
 local serpent = dofile(base.."/serpent.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
 
@@ -386,15 +396,17 @@ local function addToSpecies(child)
 	end
 end
 
-local function initializePool(after)
-	pool = newPool()
+local function initializePool()
+	local promise = Promise.new()
+	promise:resolve()
+	return promise:next(function()
+		pool = newPool()
 
-	for i=1,config.NeatConfig.Population do
-		basic = basicGenome()
-		addToSpecies(basic)
-	end
-
-    after()
+		for i=1,config.NeatConfig.Population do
+			local basic = basicGenome()
+			addToSpecies(basic)
+		end
+	end)
 end
 
 local function bytes(x)
@@ -406,33 +418,40 @@ local function bytes(x)
 end
 
 local function writeFile(filename)
-    local file = io.open(filename, "w")
-    local dump = serpent.dump(pool)
-    local zlib = libDeflate:CompressDeflate(dump)
-    file:write("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x00")
-    file:write(zlib)
-    file:write(string.char(0,0,0,0))
-    file:write(bytes(#dump % (2^32)))
-    file:close()
-    return
+	local promise = Promise.new()
+	promise:resolve()
+	return promise:next(function ()
+		local file = io.open(filename, "w")
+		local dump = serpent.dump(pool)
+		local zlib = libDeflate:CompressDeflate(dump)
+		file:write("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x00")
+		file:write(zlib)
+		file:write(string.char(0,0,0,0))
+		file:write(bytes(#dump % (2^32)))
+		file:close()
+	end)
 end
 
--- FIXME Save/load mechanism has to be rethought with items running in parallel
-local function loadFile(filename, after)
-    message("Loading pool from " .. filename, 0x00999900)
-    local file = io.open(filename, "r")
-    if file == nil then
-        message("File could not be loaded", 0x00990000)
-        return
-    end
-    local contents = file:read("*all")
-    local ok, obj = serpent.load(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
-    if not ok then
-        message("Error parsing pool file", 0x00990000)
-        return
-    end
+-- FIXME This isn't technically asynchronous. Probably can't be though.
+local function loadFile(filename)
+	local promise = Promise.new()
+	promise:resolve()
+	return promise:next(function()
+		message("Loading pool from " .. filename, 0x00999900)
+		local file = io.open(filename, "r")
+		if file == nil then
+			message("File could not be loaded", 0x00990000)
+			return
+		end
+		local contents = file:read("*all")
+		local ok, obj = serpent.load(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
+		if not ok then
+			message("Error parsing pool file", 0x00990000)
+			return
+		end
 
-    pool = obj
+		pool = obj
+	end)
 end
 
 local function savePool()
@@ -441,9 +460,8 @@ local function savePool()
     message(string.format("Saved \"%s\"!", filename:sub(#filename - 50)), 0x00009900)
 end
 
-local function loadPool(after)
-	loadFile(_M.saveLoadFile, after)
-    after()
+local function loadPool()
+	return loadFile(_M.saveLoadFile)
 end
 
 local function processRenderForm(form)
@@ -471,7 +489,7 @@ end
 local function crossover(g1, g2)
 	-- Make sure g1 is the higher fitness genome
 	if g2.fitness > g1.fitness then
-		tempg = g1
+		local tempg = g1
 		g1 = g2
 		g2 = tempg
 	end
@@ -562,11 +580,11 @@ end
 local function breedChild(species)
 	local child = {}
 	if math.random() < config.NeatConfig.CrossoverChance then
-		g1 = species.genomes[math.random(1, #species.genomes)]
-		g2 = species.genomes[math.random(1, #species.genomes)]
+		local g1 = species.genomes[math.random(1, #species.genomes)]
+		local g2 = species.genomes[math.random(1, #species.genomes)]
 		child = crossover(g1, g2)
 	else
-		g = species.genomes[math.random(1, #species.genomes)]
+		local g = species.genomes[math.random(1, #species.genomes)]
 		child = copyGenome(g)
 	end
 	
@@ -605,7 +623,7 @@ local function removeWeakSpecies()
 	local sum = totalAverageFitness()
 	for s = 1,#pool.species do
 		local species = pool.species[s]
-		breed = math.floor(species.averageFitness / sum * config.NeatConfig.Population)
+		local breed = math.floor(species.averageFitness / sum * config.NeatConfig.Population)
 		if breed >= 1 then
 			table.insert(survived, species)
 		end
@@ -628,7 +646,7 @@ local function newGeneration()
 	local children = {}
 	for s = 1,#pool.species do
 		local species = pool.species[s]
-		breed = math.floor(species.averageFitness / sum * config.NeatConfig.Population) - 1
+		local breed = math.floor(species.averageFitness / sum * config.NeatConfig.Population) - 1
 		for i=1,breed do
 			table.insert(children, breedChild(species))
 		end
@@ -652,7 +670,7 @@ local function newGeneration()
 	writeFile(_M.saveLoadFile .. ".gen" .. pool.generation .. ".pool")
 end
 
-local runner = Runner()
+local runner = Runner(Promise)
 runner.onMessage(function(msg, color)
 	message(msg, color)
 end)
@@ -671,68 +689,72 @@ local topRequested = false
 
 local loadRequested = false
 local saveRequested = false
-local function mainLoop(currentSpecies)
-    if loadRequested then
-        loadRequested = false
-        loadPool(mainLoop)
-        return
-    end
+local function mainLoop(currentSpecies, topGenome)
+	if currentSpecies == nil then
+		currentSpecies = 1
+	end
 
-    if saveRequested then
-        saveRequested = false
-        savePool()
-    end
+	local slice = pool.species[currentSpecies]
+	local promise = Promise.new()
+	promise:resolve()
+	return promise:next(function()
+		if loadRequested then
+			loadRequested = false
+			currentSpecies = nil
+			-- FIXME
+			return loadPool()
+		end
 
-    if topRequested then
-        topRequested = false
-        playTop()
-        return
-    end
+		if saveRequested then
+			saveRequested = false
+			savePool()
+		end
 
-    if not config.Running then
-        -- FIXME Tick?
-    end
+		if topRequested then
+			topRequested = false
+			return playTop()
+		end
 
-    if currentSpecies == nil then
-        currentSpecies = 1
-    end
+		if not config.Running then
+			-- FIXME Tick?
+		end
 
-    local slice = pool.species[currentSpecies]
-    if hasThreads then
-        slice = {}
-        for i=currentSpecies, currentSpecies + config.NeatConfig.Threads - 1, 1 do
-            if pool.species[i] == nil then
-                break
-            end
+		if hasThreads then
+			slice = {}
+			for i=currentSpecies, currentSpecies + config.NeatConfig.Threads - 1, 1 do
+				if pool.species[i] == nil then
+					break
+				end
 
-            table.insert(slice, pool.species[i])
-        end
-    end
-    local finished = 0
-    runner.run(
-        slice, 
-        pool.generation, 
-        function()
-            -- Genome callback
-        end,
-        function()
-            if hasThreads then
-                finished = finished + 1
-                if finished ~= #slice then
-                    return
-                end
-                currentSpecies = currentSpecies + #slice
-            else
-                currentSpecies = currentSpecies + 1
-            end
+				table.insert(slice, pool.species[i])
+			end
+		end
+		local finished = 0
 
-            if currentSpecies > #pool.species then
-                newGeneration()
-                currentSpecies = 1
-            end
-            mainLoop(currentSpecies)
-        end
-    )
+		return runner.run(
+			slice,
+			pool.generation,
+			function()
+				-- Genome callback
+				-- FIXME Should we do something here??? What was your plan, past me?
+			end
+		):next(function()
+			if hasThreads then
+				currentSpecies = currentSpecies + #slice
+			else
+				currentSpecies = currentSpecies + 1
+			end
+
+			if currentSpecies > #pool.species then
+				newGeneration()
+				currentSpecies = 1
+			end
+		end)
+    end):next(function ()
+		if topGenome == nil then
+			return mainLoop(currentSpecies)
+		end
+	end)
 end
 
 playTop = function()
@@ -749,7 +771,7 @@ playTop = function()
 	end
 	
     -- FIXME genome
-    mainLoop(maxs)
+    return mainLoop(maxs, maxg)
 end
 
 function _M.requestLoad(filename)
@@ -775,15 +797,19 @@ function _M.requestTop()
 end
 
 function _M.run(reset)
+	local promise = nil
     if pool == nil or reset == true then
-        initializePool(function() 
-            writeFile(config.PoolDir.."temp.pool")
-            mainLoop()
-        end)
-    else
-        writeFile(config.PoolDir.."temp.pool")
-        mainLoop()
+        promise = initializePool()
+	else
+		promise = Promise.new()
+		promise:resolve()
     end
+
+	return promise:next(function()
+		return writeFile(config.PoolDir.."temp.pool")
+	end):next(function ()
+		return mainLoop()
+	end)
 end
 
 return _M

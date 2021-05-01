@@ -12,6 +12,8 @@ local Outputs = #config.ButtonNames
 local guiWidth = 0 
 local guiHeight = 0
 
+local Promise = nil
+
 local function message(_M, msg, color)
     if color == nil then
         color = 0x00009900
@@ -213,19 +215,21 @@ local function displayGenome(genome)
     gui.renderctx.setnull()
 end
 
-local function advanceFrame(_M, after)
-    table.insert(_M.onFrameAdvancedHandler, after)
+local function advanceFrame(_M)
+    local promise = Promise.new()
+    table.insert(_M.onFrameAdvancedHandler, promise)
+    return promise
 end
 
 local function processFrameAdvanced(_M)
     for i=#_M.onFrameAdvancedHandler,1,-1 do
-        table.remove(_M.onFrameAdvancedHandler, i)()
+        table.remove(_M.onFrameAdvancedHandler, i):resolve()
     end
 end
 
 local buttons = nil
 local buttonCtx = gui.renderctx.new(500, 70)
-function displayButtons()
+local function displayButtons(_M)
     buttonCtx:set()
     buttonCtx:clear()
 
@@ -249,7 +253,7 @@ function displayButtons()
 
     local insert = ""
     local confirm = "[Tab] Type in filename"
-    if inputmode then
+    if _M.inputmode then
         insert = "_"
         confirm = "[Tab] Confirm filename"
     end
@@ -264,7 +268,7 @@ end
 
 local formCtx = nil
 local form = nil
-function displayForm(_M)
+local function displayForm(_M)
     if #_M.onRenderFormHandler == 0 then
         return
     end
@@ -303,7 +307,7 @@ function displayForm(_M)
 	gui.text(320, 65, string.format("Current Area: %04x", _M.currentArea))
 	gui.text(320, 80, "Rightmost: "..rightmost)
 
-    displayButtons()
+    displayButtons(_M)
     formCtx:set()
     buttons:draw(5, 130)
 
@@ -373,11 +377,12 @@ local function evaluateNetwork(_M, network, inputs, inputDeltas)
 	return outputs
 end
 
+local controller = nil
 local function evaluateCurrent(_M)
 	local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
 	
 	local inputDeltas = {}
-	inputs, inputDeltas = game.getInputs()
+	local inputs, inputDeltas = game.getInputs()
 
 	controller = evaluateNetwork(_M, genome.network, inputs, inputDeltas)
 
@@ -405,9 +410,70 @@ local function fitnessAlreadyMeasured(_M)
 	return genome.fitness ~= 0
 end
 
+local rewinds = {}
 local rew = movie.to_rewind(config.NeatConfig.Filename)
+local function rewind()
+    local promise = Promise.new()
+    movie.unsafe_rewind(rew)
+    table.insert(rewinds, promise)
+    return promise
+end
 
-local function initializeRun(_M, after)
+local function rewound()
+    for i=#rewinds,1,-1 do
+        local promise = table.remove(rewinds, i)
+        promise:resolve()
+    end
+end
+
+local function newNeuron()
+	local neuron = {}
+	neuron.incoming = {}
+	neuron.value = 0.0
+	--neuron.dw = 1
+	return neuron
+end
+
+local function generateNetwork(genome)
+	local network = {}
+	network.neurons = {}
+	
+	for i=1,Inputs do
+		network.neurons[i] = newNeuron()
+	end
+	
+	for o=1,Outputs do
+        if o == 4 then
+            goto continue
+        end
+
+        network.neurons[config.NeatConfig.MaxNodes+o] = newNeuron()
+
+        ::continue::
+	end
+	
+	table.sort(genome.genes, function (a,b)
+		return (a.out < b.out)
+	end)
+	for i=1,#genome.genes do
+		local gene = genome.genes[i]
+		if gene.enabled then
+			if network.neurons[gene.out] == nil then
+				network.neurons[gene.out] = newNeuron()
+			end
+			local neuron = network.neurons[gene.out]
+			table.insert(neuron.incoming, gene)
+			if network.neurons[gene.into] == nil then
+				network.neurons[gene.into] = newNeuron()
+			end
+		end
+	end
+
+	genome.network = network
+end
+
+
+local function initializeRun(_M)
     message(_M, string.format("Total Genomes: %d", #_M.currentSpecies.genomes))
 
     settings.set_speed("turbo")
@@ -419,12 +485,46 @@ local function initializeRun(_M, after)
     end
     exec('enable-sound '..enableSound)
     gui.subframe_update(false)
-    table.insert(_M.runInitialized, after)
-    movie.unsafe_rewind(rew)
+
+    return rewind():next(function()
+        if config.StartPowerup ~= nil then
+            game.writePowerup(config.StartPowerup)
+        end
+        _M.currentFrame = 0
+        _M.timeout = config.NeatConfig.TimeoutConstant
+        -- Kill the run if we go back to the map screen
+        game.onceMapLoaded(function()
+            _M.timeout = -100000
+        end)
+        _M.bumps = 0
+        -- Penalize player for collisions that do not result in enemy deaths
+        game.onEmptyHit(function()
+            _M.bumps = _M.bumps + 1
+        end)
+        game.clearJoypad()
+        _M.startKong = game.getKong()
+        _M.startBananas = game.getBananas()
+        _M.startKrem = game.getKremCoins()
+        _M.lastKrem = _M.startKrem
+        _M.startCoins = game.getCoins()
+        _M.startLives = game.getLives()
+        _M.partyHitCounter = 0
+        _M.powerUpCounter = 0
+        _M.powerUpBefore = game.getBoth()
+        _M.currentArea = game.getCurrentArea()
+        _M.lastArea = _M.currentArea
+        _M.rightmost = { [_M.currentArea] = 0 }
+        _M.upmost = { [_M.currentArea] = 0 }
+        local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
+        generateNetwork(genome)
+        evaluateCurrent(_M)
+    end)
 end
 
+local frame = 0
+
 local function mainLoop(_M, genome)
-    advanceFrame(_M, function()
+    return advanceFrame(_M):next(function()
         if genome ~= nil then
             _M.currentFrame = _M.currentFrame + 1
         end
@@ -432,11 +532,7 @@ local function mainLoop(_M, genome)
         genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
 
         if _M.drawFrame % 10 == 0 then
-            --if not pcall(function()
-                displayGenome(genome)
-            --end) then
-            --message(_M, "Could not render genome graph", 0x00990000)
-            --end
+            displayGenome(genome)
         end
         
         if _M.currentFrame%5 == 0 then
@@ -529,8 +625,7 @@ local function mainLoop(_M, genome)
         -- Continue if we haven't timed out
         local timeoutBonus = _M.currentFrame / 4
         if _M.timeout + timeoutBonus > 0 then
-            mainLoop(_M, genome)
-            return
+            return mainLoop(_M, genome)
         end
         
         -- Timeout calculations beyond this point
@@ -609,101 +704,14 @@ local function mainLoop(_M, genome)
                 input.keyhook("9", false)
                 input.keyhook("tab", false)
 
-                _M.finishCallback()
                 return
             end
         end
-        initializeRun(_M, function() 
-            mainLoop(_M, genome)
+
+        return initializeRun(_M):next(function()
+            return mainLoop(_M, genome)
         end)
     end)
-end
-
-local function newNeuron()
-	local neuron = {}
-	neuron.incoming = {}
-	neuron.value = 0.0
-	--neuron.dw = 1
-	return neuron
-end
-
-local function generateNetwork(genome)
-	local network = {}
-	network.neurons = {}
-	
-	for i=1,Inputs do
-		network.neurons[i] = newNeuron()
-	end
-	
-	for o=1,Outputs do
-        if o == 4 then
-            goto continue
-        end
-
-        network.neurons[config.NeatConfig.MaxNodes+o] = newNeuron()
-
-        ::continue::
-	end
-	
-	table.sort(genome.genes, function (a,b)
-		return (a.out < b.out)
-	end)
-	for i=1,#genome.genes do
-		local gene = genome.genes[i]
-		if gene.enabled then
-			if network.neurons[gene.out] == nil then
-				network.neurons[gene.out] = newNeuron()
-			end
-			local neuron = network.neurons[gene.out]
-			table.insert(neuron.incoming, gene)
-			if network.neurons[gene.into] == nil then
-				network.neurons[gene.into] = newNeuron()
-			end
-		end
-	end
-
-	genome.network = network
-end
-
-local function elapsed(_M)
-    if config.StartPowerup ~= nil then
-        game.writePowerup(config.StartPowerup)
-    end
-    _M.currentFrame = 0
-    _M.timeout = config.NeatConfig.TimeoutConstant
-    -- Kill the run if we go back to the map screen
-    game.onceMapLoaded(function()
-        _M.timeout = -100000
-    end)
-    _M.bumps = 0
-    -- Penalize player for collisions that do not result in enemy deaths
-    game.onEmptyHit(function()
-        _M.bumps = _M.bumps + 1
-    end)
-    game.clearJoypad()
-    _M.startKong = game.getKong()
-    _M.startBananas = game.getBananas()
-    _M.startKrem = game.getKremCoins()
-    _M.lastKrem = _M.startKrem
-    _M.startCoins = game.getCoins()
-    _M.startLives = game.getLives()
-    _M.partyHitCounter = 0
-    _M.powerUpCounter = 0
-    _M.powerUpBefore = game.getBoth()
-    _M.currentArea = game.getCurrentArea()
-    _M.lastArea = _M.currentArea
-    _M.rightmost = { [_M.currentArea] = 0 }
-    _M.upmost = { [_M.currentArea] = 0 }
-    local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
-    generateNetwork(genome)
-    evaluateCurrent(_M)
-    for i=#_M.runInitialized,1,-1 do
-        table.remove(_M.runInitialized, i)()
-    end
-end
-
-local function rewound()
-    set_timer_timeout(1)
 end
 
 local function register(_M, name, func)
@@ -740,7 +748,7 @@ local function keyhook (_M, key, state)
         if key == "tab" then
             _M.inputmode = not _M.inputmode
             _M.helddown = key
-        elseif inputmode then
+        elseif _M.inputmode then
             return
         elseif key == "1" then
             _M.helddown = key
@@ -761,13 +769,13 @@ local function keyhook (_M, key, state)
             pool.run(true)
         end
     elseif state.value == 0 then
-        helddown = nil
+        _M.helddown = nil
     end
 end
 
 local function saveLoadInput(_M)
     local inputs = input.raw()
-    if not inputmode then
+    if not _M.inputmode then
         -- FIXME
         _M.saveLoadFile = config.NeatConfig.SaveFile
         return
@@ -829,30 +837,25 @@ local function saveLoadInput(_M)
     end
 end
 
-local function run(_M, species, generationIdx, genomeCallback, finishCallback)
+local function run(_M, species, generationIdx, genomeCallback)
     game.registerHandlers()
 
     _M.currentGenerationIndex = generationIdx
     _M.currentSpecies = species
     _M.currentGenomeIndex = 1
     _M.genomeCallback = genomeCallback
-    _M.finishCallback = finishCallback
     register(_M, 'paint', function()
         painting(_M)
     end)
     register(_M, 'input', function()
+        frame = frame + 1
         processFrameAdvanced(_M)
-    end)
-    register(_M, 'input', function()
         saveLoadInput(_M)
     end)
     register(_M, 'keyhook', function(key, state)
         keyhook(_M, key, state)
     end)
     register(_M, 'post_rewind', rewound)
-    register(_M, 'timer', function()
-        elapsed(_M)
-    end)
 
     input.keyhook("1", true)
     input.keyhook("4", true)
@@ -861,8 +864,8 @@ local function run(_M, species, generationIdx, genomeCallback, finishCallback)
     input.keyhook("9", true)
     input.keyhook("tab", true)
 
-    initializeRun(_M, function()
-        mainLoop(_M)
+    return initializeRun(_M):next(function()
+        return mainLoop(_M)
     end)
 end
 
@@ -874,11 +877,11 @@ local function onRenderForm(_M, handler)
     table.insert(_M.onRenderFormHandler, handler)
 end
 
-return function()
+return function(promise)
+    Promise = promise
     local _M = {
         currentGenerationIndex = 1,
         currentSpecies = nil,
-        finishCallback = nil,
         genomeCallback = nil,
         currentGenomeIndex = 1,
         currentFrame = 0,
@@ -907,8 +910,6 @@ return function()
         upmost = {},
         lastBoth = 0,
 
-        runInitialized = {},
-
         onMessageHandler = {},
         onSaveHandler = {},
         onLoadHandler = {},
@@ -933,8 +934,8 @@ return function()
         onLoad(_M, handler)
     end
 
-    _M.run = function(species, generationIdx, genomeCallback, finishCallback)
-        run(_M, species, generationIdx, genomeCallback, finishCallback)
+    _M.run = function(species, generationIdx, genomeCallback)
+        return run(_M, species, generationIdx, genomeCallback)
     end
 
     return _M

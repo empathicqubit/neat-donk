@@ -6,7 +6,7 @@ local warn = '========== The ROM must be running before running this script'
 io.stderr:write(warn)
 print(warn)
 
-local util = dofile(base.."/util.lua")
+local util = dofile(base.."/util.lua")()
 local mem = dofile(base.."/mem.lua")
 local spritelist = dofile(base.."/spritelist.lua")
 local game = dofile(base.."/game.lua")
@@ -436,3 +436,17 @@ input.keyhook("9", true)
 input.keyhook("0", true)
 
 set_timer_timeout(100 * 1000)
+
+for i=0,22,1 do
+    memory2.BUS:registerwrite(mem.addr.spriteBase + mem.size.sprite * i + mem.offset.sprite.x, function(addr, val)
+        print(memory.getregister('pc'))
+    end)
+end
+
+-- fe0a58 crate: near bunch and klomp on barrels
+-- fe0a58: Crate X position
+-- fe0a60: Crate Y position
+
+-- fe0a70 bunch: near crate and klomp on barrels
+-- fe0a70: X position
+-- fe0a72: Y position

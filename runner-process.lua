@@ -1,17 +1,21 @@
-local gui, utime = gui, utime
+local gui, utime, callback, set_timer_timeout = gui, utime, callback, set_timer_timeout
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local Promise = dofile(base.."/promise.lua")
+-- Only the parent should manage ticks!
+callback.register('timer', function()
+    Promise.update()
+    set_timer_timeout(1)
+end)
+set_timer_timeout(1)
 
 local Runner = dofile(base.."/runner.lua")
 local serpent = dofile(base.."/serpent.lua")
-local util = dofile(base.."/util.lua")
+local util = dofile(base.."/util.lua")(Promise)
 
 local inputFilePath = os.getenv("RUNNER_INPUT_FILE")
 local outputFilePath = os.getenv("RUNNER_OUTPUT_FILE")
-
-local first = false
 
 local outContents = {}
 
@@ -22,7 +26,7 @@ local species = nil
 local speciesId = -1
 local generationIndex = nil
 
-local runner = Runner()
+local runner = Runner(Promise)
 runner.onMessage(function(msg, color)
     statusLine = msg
     statusColor = color
@@ -78,32 +82,7 @@ runner.onLoad(function(filename)
     )
 end)
 
-local waiter = nil
-if not util.isWin then
-    waiter = util.startWaiting(inputFilePath)
-end
-
 local function waitLoop()
-    if not first then
-        local sec, usec = utime()
-        local ts = sec * 1000000 + usec
-
-        local outFile = io.open(outputFilePath, "w")
-        outFile:write(serpent.dump({ type = 'onInit', ts = ts }))
-        outFile:close()
-
-        print(string.format('Wrote init to output at %d', ts))
-
-
-        first = true
-    end
-
-    print('Waiting for input from master process')
-
-    if not util.isWin then
-        util.finishWaiting(waiter)
-    end
-
     local inputData = nil
     local ok = false
     while not ok or inputData == nil or speciesId == inputData[1].id do
@@ -128,7 +107,7 @@ local function waitLoop()
 
     print('Running')
 
-    runner.run(
+    return runner.run(
         species,
         generationIndex,
         function(genome, index)
@@ -141,33 +120,55 @@ local function waitLoop()
                     speciesId = speciesId,
                 })
             )
-        end,
-        function()
-            table.insert(
-                outContents,
-                serpent.dump({
-                    type = 'onFinish',
-                    speciesId = speciesId,
-                })
-            )
-
-            -- Truncate the input file to reduce the amount of time
-            -- wasted if we reopen it too early
-            local inputFile = io.open(inputFilePath, "w")
-            inputFile:close()
-
-            if not util.isWin then
-                waiter = util.startWaiting(inputFilePath)
-            end
-
-            -- Write the result
-            local outFile = io.open(outputFilePath, "w")
-            outFile:write(table.concat(outContents, "\n"))
-            outFile:close()
-
-            waitLoop()
         end
-    )
+    ):next(function()
+        table.insert(
+            outContents,
+            serpent.dump({
+                type = 'onFinish',
+                speciesId = speciesId,
+            })
+        )
+
+        -- Truncate the input file to reduce the amount of time
+        -- wasted if we reopen it too early
+        local inputFile = io.open(inputFilePath, "w")
+        inputFile:close()
+
+        local waiter = nil
+        if util.isWin then
+            waiter = Promise.new()
+            waiter:resolve()
+        else
+            waiter = util.waitForFiles(inputFilePath)
+        end
+
+        -- Write the result
+        local outFile = io.open(outputFilePath, "w")
+        outFile:write(table.concat(outContents, "\n"))
+        outFile:close()
+
+        return waiter
+    end):next(waitLoop)
 end
 
-waitLoop()
+local waiter = nil
+if util.isWin then
+    waiter = Promise.new()
+    waiter:resolve()
+else
+    waiter = util.waitForFiles(inputFilePath)
+end
+
+local sec, usec = utime()
+local ts = sec * 1000000 + usec
+
+local outFile = io.open(outputFilePath, "w")
+outFile:write(serpent.dump({ type = 'onInit', ts = ts }))
+outFile:close()
+
+print(string.format('Wrote init to output at %d', ts))
+
+waiter:next(waitLoop):catch(function(error)
+    print('ERROR: '..error)
+end)

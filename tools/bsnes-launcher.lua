@@ -1,6 +1,6 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1").."/.."
 
-local util = dofile(base.."/util.lua")
+local util = dofile(base.."/util.lua")()
 local config = dofile(base.."/config.lua")
 local mem = dofile(base.."/mem.lua")
 

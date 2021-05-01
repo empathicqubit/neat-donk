@@ -2,6 +2,8 @@ local utime = utime
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local Promise = nil
+
 local _M = {}
 
 _M.isWin = package.config:sub(1, 1) == '\\'
@@ -102,27 +104,10 @@ function _M.closeCmd(handle)
     end
 end
 
-function _M.finishWaiting(waiter, count)
-    if count == nil then
-        count = 1
-    end
+function _M.waitForFiles(filenames, count, wild)
+    local promise = Promise.new()
+    promise:resolve()
 
-    if _M.isWin then
-        local i = 1
-        while i <= count do
-            local line = waiter:read("*l")
-            for chr in line:gmatch(";") do
-                i = i + 1
-            end
-            i = i + 1
-        end
-    else
-        waiter:read("*a")
-        _M.closeCmd(waiter)
-    end
-end
-
-function _M.startWaiting(filenames, count, wild)
     if type(filenames) == 'string' then
         if wild == nil then
             wild = filenames
@@ -135,16 +120,15 @@ function _M.startWaiting(filenames, count, wild)
         count = #filenames
     end
 
+    local poppet = nil
     if _M.isWin then
         local sec, usec = utime()
         print(string.format('Starting watching file at %d', sec * 1000000 + usec))
 
         local cmd = '"'..base..'/watchexec/watchexec.exe" "-w" "'..table.concat(filenames, '" "-w" "')..'" "echo" "%WATCHEXEC_WRITTEN_PATH%"'
-        local poppet = _M.popenCmd(cmd, base)
+        poppet = _M.popenCmd(cmd, base)
 
         poppet:read("*l")
-
-        return poppet
     else
         local watchCmd = ''
         if count == 1 then
@@ -167,8 +151,24 @@ done ) &
 wait
 EOF]]
         end
-        return _M.popenCmd(watchCmd)
+        poppet = _M.popenCmd(watchCmd)
     end
+
+    return promise:next(function()
+        if _M.isWin then
+            local i = 1
+            while i <= count do
+                local line = poppet:read("*l")
+                for chr in line:gmatch(";") do
+                    i = i + 1
+                end
+                i = i + 1
+            end
+        else
+            print(poppet:read("*a"))
+            _M.closeCmd(poppet)
+        end
+    end)
 end
 
 function _M.table_to_string(tbl)
@@ -214,4 +214,7 @@ function _M.file_exists(name)
    if f~=nil then io.close(f) return true else return false end
 end
 
-return _M
+return function(promise)
+    Promise = promise
+    return _M
+end

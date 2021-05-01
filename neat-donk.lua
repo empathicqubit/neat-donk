@@ -4,7 +4,6 @@ local gui = gui
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local pool = dofile(base.."/pool.lua")
-local util = dofile(base.."/util.lua")
 
 local statusLine = nil
 local statusColor = 0x0000ff00
@@ -30,4 +29,10 @@ pool.onRenderForm(function(form)
         gui.text(-500, guiHeight - 20, statusLine, 0x00000000)
     end
 end)
-pool.run()
+
+pool.run():next(function()
+    print("The pool finished running!!!")
+end):catch(function(error)
+    io.stderr:write(string.format("There was a problem running the pool: %s", error))
+    print(string.format("There was a problem running the pool: %s", error))
+end)
