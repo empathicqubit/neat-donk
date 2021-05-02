@@ -481,8 +481,6 @@ end
 
 
 local function initializeRun(_M)
-    message(_M, string.format("Total Genomes: %d", #_M.currentSpecies.genomes))
-
     settings.set_speed("turbo")
     -- XXX Does this actually work or only affects new VM loads?
     settings.set('lua-maxmem', 1024)
