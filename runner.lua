@@ -2,17 +2,18 @@ local gui, input, movie, settings, exec, callback, set_timer_timeout = gui, inpu
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local Promise = nil
+
 local config = dofile(base.."/config.lua")
 local game = dofile(base.."/game.lua")
 local mathFunctions = dofile(base.."/mathFunctions.lua")
+local util = dofile(base.."/util.lua")()
 
 local Inputs = config.InputSize+1
 local Outputs = #config.ButtonNames
 
 local guiWidth = 0 
 local guiHeight = 0
-
-local Promise = nil
 
 local function message(_M, msg, color)
     if color == nil then

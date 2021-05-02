@@ -3,12 +3,6 @@ local callback, set_timer_timeout = callback, set_timer_timeout
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local Promise = dofile(base.."/promise.lua")
--- Only the parent should manage ticks!
-callback.register('timer', function()
-    Promise.update()
-	set_timer_timeout(1)
-end)
-set_timer_timeout(1)
 
 local config = dofile(base.."/config.lua")
 local util = dofile(base.."/util.lua")(Promise)
@@ -18,6 +12,21 @@ local libDeflate = dofile(base.."/LibDeflate.lua")
 local hasThreads = 
 	not util.isWin and
 		config.NeatConfig.Threads > 1
+
+-- Only the parent should manage ticks!
+-- I'm not terribly thrilled with this logic
+if hasThreads then
+	callback.register('timer', function()
+		Promise.update()
+		set_timer_timeout(1)
+	end)
+	set_timer_timeout(1)
+else
+	callback.register('input', function()
+		Promise.update()
+	end)
+end
+
 local Runner = nil
 if hasThreads then
 	local warn = '========== When using threads, the ROM file to use comes from config.lua. Also, you do not need to start any ROM in the parent process.'
