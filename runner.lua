@@ -274,6 +274,7 @@ local function displayForm(_M)
     end
 
     if form ~= nil and _M.drawFrame % 10 ~= 0 then
+        gui.renderctx.setnull()
         for i=#_M.onRenderFormHandler,1,-1 do
             _M.onRenderFormHandler[i](form)
         end
@@ -629,6 +630,10 @@ local function mainLoop(_M, genome)
         end
         
         _M.timeout = _M.timeout - 1
+
+        if lastFrame ~= frame then
+            message(_M, string.format("We missed %d frames", frame - lastFrame), 0x00990000)
+        end
 
         -- Continue if we haven't timed out
         local timeoutBonus = _M.currentFrame / 4

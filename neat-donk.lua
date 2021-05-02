@@ -4,12 +4,30 @@ local gui = gui
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local pool = dofile(base.."/pool.lua")
+local util = dofile(base.."/util.lua")()
 
 local statusLine = nil
 local statusColor = 0x0000ff00
 
 pool.onMessage(function(msg, color)
     print(msg)
+	local color = util.nearestColor(color, {
+		-- Red
+		['91'] = { r = 255, g = 0  , b = 0  },
+		-- Green
+		['92'] = { r = 0  , g = 255, b = 0  },
+		-- Yellow
+		['93'] = { r = 255, g = 255, b = 0  },
+		-- Blue
+		['94'] = { r = 0  , g = 0  , b = 255},
+		-- Magenta
+		['95'] = { r = 255, g = 0  , b = 255},
+		-- Cyan
+		['96'] = { r = 0  , g = 255, b = 255},
+		-- White
+		['97'] = { r = 255, g = 255, b = 255},
+	})
+    io.stderr:write('\x1b['..color..'m'..msg..'\x1b[0m\n')
     statusLine = msg
     statusColor = color
 end)
@@ -25,7 +43,7 @@ pool.onRenderForm(function(form)
     form:draw(-500, 0)
 
     if statusLine ~= nil then
-        gui.rectangle(-500, guiHeight - 20, 0, 20, 1, 0x00000000, statusColor)
+        gui.rectangle(-500, guiHeight - 20, guiWidth, 20, 1, 0x00000000, statusColor)
         gui.text(-500, guiHeight - 20, statusLine, 0x00000000)
     end
 end)

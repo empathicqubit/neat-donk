@@ -1,4 +1,4 @@
-local utime = utime
+local utime, bit = utime, bit
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
@@ -214,7 +214,32 @@ function _M.file_exists(name)
    if f~=nil then io.close(f) return true else return false end
 end
 
+function _M.nearestColor(needle, colors)
+	local opacity = bit.band(needle, 0xff000000)
+	local needle = {
+		r = bit.lrshift(bit.band(needle, 0x00ff0000), 4),
+		g = bit.lrshift(bit.band(needle, 0x0000ff00), 2),
+		b = bit.band(needle, 0x000000ff),
+	}
+	local minDistanceSq = 0x7fffffff
+	local value = nil
+	for name,color in pairs(colors) do
+		local distanceSq = (
+			math.pow(needle.r - color.r, 2) +
+			math.pow(needle.g - color.g, 2) +
+			math.pow(needle.b - color.b, 2)
+		)
+		if distanceSq < minDistanceSq then
+			minDistanceSq = distanceSq
+			value = name
+		end
+	end
+
+	return value
+end
+
 return function(promise)
     Promise = promise
     return _M
 end
+
