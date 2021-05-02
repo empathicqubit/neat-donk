@@ -570,7 +570,6 @@ local function mainLoop(_M, genome)
         if nextArea ~= _M.lastArea then
             _M.lastArea = nextArea
             game.onceAreaLoaded(function()
-                message(_M, "Loady")
                 _M.timeout = _M.timeout + 60 * 5
                 _M.currentArea = nextArea
                 _M.lastArea = _M.currentArea
