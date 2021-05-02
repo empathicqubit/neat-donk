@@ -4,9 +4,12 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
 local Promise = dofile(base.."/promise.lua")
 -- Only the parent should manage ticks!
-callback.register('input', function()
-    Promise.update()
+callback.register('timer', function()
+	Promise.update()
+	set_timer_timeout(1)
 end)
+set_timer_timeout(1)
+
 
 local Runner = dofile(base.."/runner.lua")
 local serpent = dofile(base.."/serpent.lua")

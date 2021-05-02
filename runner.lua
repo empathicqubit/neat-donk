@@ -379,7 +379,20 @@ local function evaluateNetwork(_M, network, inputs, inputDeltas)
 	return outputs
 end
 
-local controller = nil
+local controller = {}
+local function updateController()
+    for b=0,#config.ButtonNames - 1,1 do
+        if controller[b] then
+            input.set(0, b, 1)
+        else
+            input.set(0, b, 0)
+        end
+    end
+end
+
+local frame = 0
+local lastFrame = 0
+
 local function evaluateCurrent(_M)
 	local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
 	
@@ -396,14 +409,6 @@ local function evaluateCurrent(_M)
 		controller[4] = false
 		controller[5] = false
 	end
-
-    for b=0,#config.ButtonNames - 1,1 do
-        if controller[b] then
-            input.set(0, b, 1)
-        else
-            input.set(0, b, 0)
-        end
-    end
 end
 
 local function fitnessAlreadyMeasured(_M)
@@ -420,9 +425,6 @@ local function rewind()
     table.insert(rewinds, promise)
     return promise
 end
-
-local frame = 0
-local lastFrame = 0 
 
 local function rewound()
     frame = 0
@@ -545,14 +547,6 @@ local function mainLoop(_M, genome)
         
         if _M.currentFrame%5 == 0 then
             evaluateCurrent(_M)
-        end
-
-        for b=0,#config.ButtonNames - 1,1 do
-            if controller[b] then
-                input.set(0, b, 1)
-            else
-                input.set(0, b, 0)
-            end
         end
 
         game.getPositions()
@@ -861,6 +855,7 @@ local function run(_M, species, generationIdx, genomeCallback)
     end)
     register(_M, 'input', function()
         frame = frame + 1
+        updateController()
         processFrameAdvanced(_M)
         saveLoadInput(_M)
     end)

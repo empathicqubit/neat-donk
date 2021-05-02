@@ -14,18 +14,11 @@ local hasThreads =
 		config.NeatConfig.Threads > 1
 
 -- Only the parent should manage ticks!
--- I'm not terribly thrilled with this logic
-if hasThreads then
-	callback.register('timer', function()
-		Promise.update()
-		set_timer_timeout(1)
-	end)
+callback.register('timer', function()
+	Promise.update()
 	set_timer_timeout(1)
-else
-	callback.register('input', function()
-		Promise.update()
-	end)
-end
+end)
+set_timer_timeout(1)
 
 local Runner = nil
 if hasThreads then
@@ -453,7 +446,8 @@ local function loadFile(filename)
 			return
 		end
 		local contents = file:read("*all")
-		local ok, obj = serpent.load(libDeflate:DecompressDeflate(contents:sub(11, #contents - 8)))
+		local decomp, _ = libDeflate:DecompressDeflate(contents:sub(11, #contents - 8))
+		local ok, obj = serpent.load(decomp)
 		if not ok then
 			message("Error parsing pool file", 0x00990000)
 			return
@@ -465,8 +459,9 @@ end
 
 local function savePool()
 	local filename = _M.saveLoadFile
-	writeFile(filename)
-    message(string.format("Saved \"%s\"!", filename:sub(#filename - 50)), 0x00009900)
+	return writeFile(filename):next(function()
+		message(string.format("Saved \"%s\"!", filename:sub(#filename - 50)), 0x00009900)
+	end)
 end
 
 local function loadPool()
@@ -716,7 +711,7 @@ local function mainLoop(currentSpecies, topGenome)
 
 		if saveRequested then
 			saveRequested = false
-			savePool()
+			return savePool()
 		end
 
 		if topRequested then
