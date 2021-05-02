@@ -11,11 +11,11 @@ local statusColor = 0x0000ff00
 
 pool.onMessage(function(msg, color)
     print(msg)
-	local color = util.nearestColor(color, {
-		-- Red
-		['91'] = { r = 255, g = 0  , b = 0  },
+	local stderrColor = util.nearestColor(color, {
 		-- Green
 		['92'] = { r = 0  , g = 255, b = 0  },
+		-- Red
+		['91'] = { r = 255, g = 0  , b = 0  },
 		-- Yellow
 		['93'] = { r = 255, g = 255, b = 0  },
 		-- Blue
@@ -27,7 +27,7 @@ pool.onMessage(function(msg, color)
 		-- White
 		['97'] = { r = 255, g = 255, b = 255},
 	})
-    io.stderr:write('\x1b['..color..'m'..msg..'\x1b[0m\n')
+    io.stderr:write('\x1b['..stderrColor..'m'..msg..'\x1b[0m\n')
     statusLine = msg
     statusColor = color
 end)

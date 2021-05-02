@@ -233,6 +233,9 @@ function _M.nearestColor(needle, colors)
 			minDistanceSq = distanceSq
 			value = name
 		end
+        if value == nil then
+            value = name
+        end
 	end
 
 	return value
