@@ -231,28 +231,29 @@ function _M.getJumpHeight()
 end
 
 function _M.getSprite(idx)
-    local base_addr = idx * mem.size.sprite + mem.addr.spriteBase
+    local baseAddr = idx * mem.size.sprite + mem.addr.spriteBase
+    local spriteData = memory.readregion(baseAddr, mem.size.sprite)
 
     local offsets = mem.offset.sprite
-    local control = memory.readword(base_addr + offsets.control)
+    local control = util.regionToWord(spriteData, offsets.control)
 
     if control == 0 then
         return nil
     end
 
-    local x = memory.readword(base_addr + offsets.x)
-    local y = memory.readword(base_addr + offsets.y)
+    local x = util.regionToWord(spriteData, offsets.x)
+    local y = util.regionToWord(spriteData, offsets.y)
     local sprite = {
         control = control,
         screenX = x - 256 - _M.cameraX - 256,
         screenY = y - 256 - _M.cameraY - 256,
-        jumpHeight = memory.readword(base_addr + offsets.jumpHeight),
+        jumpHeight = util.regionToWord(spriteData, offsets.jumpHeight),
         -- style bits
         -- 0x4000 0: Right facing 1: Flipped
         -- 0x1000 0: Alive 1: Dying
-        style = memory.readword(base_addr + offsets.style),
-        velocityX = memory.readsword(base_addr + offsets.velocityX),
-        velocityY = memory.readsword(base_addr + offsets.velocityY),
+        style = util.regionToWord(spriteData, offsets.style),
+        velocityX = util.regionToWord(spriteData, offsets.velocityX),
+        velocityY = util.regionToWord(spriteData, offsets.velocityY),
         x = x,
         y = y,
         good = spritelist.Sprites[control]

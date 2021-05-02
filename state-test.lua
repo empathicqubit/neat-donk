@@ -1,5 +1,6 @@
-local classes = _SYSTEM.all_classes()
-io.stderr:write(classes:gsub(classes:sub(8,1), '\n'))
-for k,v in pairs(_SYSTEM) do
-    print(k)
+print(string.hex(bit.compose(0xef, 0xbe)))
+local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
+local game = dofile(base.."/game.lua")
+
+function on_input()
 end

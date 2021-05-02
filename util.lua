@@ -241,8 +241,11 @@ function _M.nearestColor(needle, colors)
 	return value
 end
 
+function _M.regionToWord(region, offset)
+    return bit.compose(region[offset], region[offset + 1])
+end
+
 return function(promise)
     Promise = promise
     return _M
 end
-
