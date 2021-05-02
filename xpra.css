@@ -1,4 +1,4 @@
-.wmclass-Lsnes {
+#screen .wmclass-Lsnes, #screen .window[class*="term"] {
     display: block;
     position: relative;
     top: 0 !important;
