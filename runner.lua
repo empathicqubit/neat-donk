@@ -244,7 +244,7 @@ local function displayButtons(_M)
     end
     gui.text(5, 2, "[1] "..startStop)
 
-    gui.text(130, 2, "[4] Play Top")
+    --gui.text(130, 2, "[4] Play Top")
 
     gui.text(240, 2, "[6] Save")
 
