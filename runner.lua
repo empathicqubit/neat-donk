@@ -5,7 +5,7 @@ local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 local Promise = nil
 
 local config = dofile(base.."/config.lua")
-local game = dofile(base.."/game.lua")
+local game = nil
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local util = dofile(base.."/util.lua")()
 
@@ -216,18 +216,6 @@ local function displayGenome(genome)
     gui.renderctx.setnull()
 end
 
-local function advanceFrame(_M)
-    local promise = Promise.new()
-    table.insert(_M.onFrameAdvancedHandler, promise)
-    return promise
-end
-
-local function processFrameAdvanced(_M)
-    for i=#_M.onFrameAdvancedHandler,1,-1 do
-        table.remove(_M.onFrameAdvancedHandler, i):resolve()
-    end
-end
-
 local buttons = nil
 local buttonCtx = gui.renderctx.new(500, 70)
 local function displayButtons(_M)
@@ -286,10 +274,11 @@ local function displayForm(_M)
     formCtx:clear()
 	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0xbb000000)
 	--gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
-
-    local rightmost = _M.rightmost[_M.currentArea]
-    if rightmost == nil then
-        rightmost = 0
+    
+    local areaInfo = _M.areaInfo[_M.currentArea]
+    local distanceTraversed = 0
+    if areaInfo ~= nil then
+        distanceTraversed = areaInfo.startDistance - areaInfo.shortest
     end
 
 	gui.text(5, 30, "Timeout: " .. _M.timeout)
@@ -307,7 +296,7 @@ local function displayForm(_M)
 	gui.text(230, 65, "Damage: " .. _M.partyHitCounter)
 	gui.text(230, 80, "PowerUp: " .. _M.powerUpCounter)
 	gui.text(320, 65, string.format("Current Area: %04x", _M.currentArea))
-	gui.text(320, 80, "Rightmost: "..rightmost)
+	gui.text(320, 80, string.format("Traveled: %d", distanceTraversed))
 
     displayButtons(_M)
     formCtx:set()
@@ -417,24 +406,6 @@ local function fitnessAlreadyMeasured(_M)
 	return genome.fitness ~= 0
 end
 
-local rewinds = {}
-local rew = movie.to_rewind(config.NeatConfig.Filename)
-local function rewind()
-    local promise = Promise.new()
-    movie.unsafe_rewind(rew)
-    table.insert(rewinds, promise)
-    return promise
-end
-
-local function rewound()
-    frame = 0
-    lastFrame = 0
-    for i=#rewinds,1,-1 do
-        local promise = table.remove(rewinds, i)
-        promise:resolve()
-    end
-end
-
 local function newNeuron()
 	local neuron = {}
 	neuron.incoming = {}
@@ -481,6 +452,13 @@ local function generateNetwork(genome)
 	genome.network = network
 end
 
+local rew = movie.to_rewind(config.NeatConfig.Filename)
+local function rewind()
+    return game.rewind(rew):next(function()
+        frame = 0
+        lastFrame = 0
+    end)
+end
 
 local function initializeRun(_M)
     settings.set_speed("turbo")
@@ -493,7 +471,7 @@ local function initializeRun(_M)
     exec('enable-sound '..enableSound)
     gui.subframe_update(false)
 
-    return rewind():next(function()
+    return rewind():next(function(preferredExit)
         if config.StartPowerup ~= nil then
             game.writePowerup(config.StartPowerup)
         end
@@ -520,18 +498,49 @@ local function initializeRun(_M)
         _M.powerUpBefore = game.getBoth()
         _M.currentArea = game.getCurrentArea()
         _M.lastArea = _M.currentArea
-        _M.rightmost = { [_M.currentArea] = 0 }
-        _M.upmost = { [_M.currentArea] = 0 }
+
+        for areaId,areaInfo in pairs(_M.areaInfo) do
+            areaInfo.shortest = areaInfo.startDistance
+        end
+
         local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
         generateNetwork(genome)
         evaluateCurrent(_M)
     end)
 end
 
+local function getDistanceTraversed(areaInfo)
+    local distanceTraversed = 0
+    for areaId,areaInfo in pairs(areaInfo) do
+        distanceTraversed = areaInfo.startDistance - areaInfo.shortest
+    end
+    return distanceTraversed
+end
+
 local function mainLoop(_M, genome)
-    return advanceFrame(_M):next(function()
+    return game.advanceFrame():next(function()
+        local nextArea = game.getCurrentArea()
+        if nextArea ~= _M.lastArea then
+            _M.lastArea = nextArea
+            game.onceAreaLoaded(function()
+                _M.timeout = _M.timeout + 60 * 5
+                _M.currentArea = nextArea
+                _M.lastArea = _M.currentArea
+            end)
+        elseif _M.currentArea == _M.lastArea and _M.areaInfo[_M.currentArea] == nil then
+            message(_M, 'Searching for the main exit in this area')
+            return game.findPreferredExit():next(function(preferredExit)
+                local startDistance = math.floor(math.sqrt((preferredExit.y - game.partyY) ^ 2 + (preferredExit.x - game.partyX) ^ 2))
+                _M.areaInfo[_M.currentArea] = {
+                    startDistance = startDistance,
+                    preferredExit = preferredExit,
+                    shortest = startDistance,
+                }
+            end)
+        end
+    end):next(function()
         if lastFrame + 1 ~= frame then
-            message(_M, string.format("We missed %d frames", frame - lastFrame), 0x00990000)
+            message(_M, string.format("We missed %d frames", frame - lastFrame), 0x00ff0000)
         end
         lastFrame = frame
 
@@ -566,37 +575,16 @@ local function mainLoop(_M, genome)
             end
         end
 
-        local nextArea = game.getCurrentArea()
-        if nextArea ~= _M.lastArea then
-            _M.lastArea = nextArea
-            game.onceAreaLoaded(function()
-                _M.timeout = _M.timeout + 60 * 5
-                _M.currentArea = nextArea
-                _M.lastArea = _M.currentArea
-                if _M.rightmost[_M.currentArea] == nil then
-                    _M.rightmost[_M.currentArea] = 0
-                    _M.upmost[_M.currentArea] = 0
-                end
-            end)
-        end
-
-        if not game.vertical then
-            if game.partyX > _M.rightmost[_M.currentArea] then
-                _M.rightmost[_M.currentArea] = game.partyX
-                if _M.timeout < timeoutConst then
-                    _M.timeout = timeoutConst
-                end
-            end
-        else
-            if game.partyY > _M.upmost[_M.currentArea] then
-                _M.upmost[_M.currentArea] = game.partyY
+        local areaInfo = _M.areaInfo[_M.currentArea]
+        if areaInfo ~= nil then
+            local exitDist = math.floor(math.sqrt((areaInfo.preferredExit.y - game.partyY) ^ 2 + (areaInfo.preferredExit.x - game.partyX) ^ 2))
+            if exitDist < areaInfo.shortest then
+                areaInfo.shortest = exitDist
                 if _M.timeout < timeoutConst then
                     _M.timeout = timeoutConst
                 end
             end
         end
-        -- FIXME Measure distance to target / area exit
-        -- We might not always be horizontal
         
         local hitTimer = game.getHitTimer(_M.lastBoth)
         
@@ -651,20 +639,9 @@ local function mainLoop(_M, genome)
         local bumpPenalty = _M.bumps * 100
         local powerUpBonus = _M.powerUpCounter * 100
 
-        local most = 0
-        if not game.vertical then
-            for k,v in pairs(_M.rightmost) do
-                most = most + v
-            end
-            most = most - _M.currentFrame / 2
-        else
-            for k,v in pairs(_M.upmost) do
-                most = most + v
-            end
-            most = most - _M.currentFrame / 2
-        end
-    
-        local fitness = bananaCoinsFitness - bumpPenalty - hitPenalty + powerUpBonus + most + game.getJumpHeight() / 100
+        local distanceTraversed = getDistanceTraversed(_M.areaInfo) - _M.currentFrame / 2
+
+        local fitness = bananaCoinsFitness - bumpPenalty - hitPenalty + powerUpBonus + distanceTraversed + game.getJumpHeight() / 100
 
         local lives = game.getLives()
 
@@ -855,13 +832,11 @@ local function run(_M, species, generationIdx, genomeCallback)
     register(_M, 'input', function()
         frame = frame + 1
         updateController()
-        processFrameAdvanced(_M)
         saveLoadInput(_M)
     end)
     register(_M, 'keyhook', function(key, state)
         keyhook(_M, key, state)
     end)
-    register(_M, 'post_rewind', rewound)
 
     input.keyhook("1", true)
     input.keyhook("4", true)
@@ -885,6 +860,9 @@ end
 
 return function(promise)
     Promise = promise
+    if game == nil then
+        game = dofile(base.."/game.lua")(Promise)
+    end
     local _M = {
         currentGenerationIndex = 1,
         currentSpecies = nil,
@@ -912,16 +890,13 @@ return function(promise)
         powerUpBefore = 0,
         currentArea = 0,
         lastArea = 0,
-        rightmost = {},
-        upmost = {},
+        areaInfo = {},
         lastBoth = 0,
 
         onMessageHandler = {},
         onSaveHandler = {},
         onLoadHandler = {},
         onRenderFormHandler = {},
-        onFrameAdvancedHandler = {},
-
     }
 
     _M.onRenderForm = function(handler)

@@ -4,100 +4,114 @@ _M.Sprites = {}
 
 -- Make sure this list is sorted before initialization.
 _M.NeutralSprites = {
-    0x0020, -- Krow egg fragments
-    0x0060, -- Barrel fragments
-    0x0064, -- Barrel fragments
+    krowEggFragments = 0x0020,
+    barrelFragments = 0x0060,
+    barrelFragments2 = 0x0064,
 
     -- Our heroes
-    0x00e4, -- Diddy
-    0x00e8, -- Dixie
-    0x0100, -- Stars
+    diddy = 0x00e4,
+    dixie = 0x00e8,
+    stars = 0x0100,
 
     -- Items that require too much interaction
-    0x01a4, -- Barrel
-    0x01b0, -- Cannonball (immobile)
-    0x01c0, -- Chest
-    0x01bc, -- Small crate
-    0x011c, -- Barrel
-    0x013c, -- Cannon
-    0x014c, -- Hook
-    0x01b8, -- TNT
+    barrel = 0x01a4, -- Barrel
+    cannonball = 0x01b0,
+    chest = 0x01c0,
+    smallCrate = 0x01bc,
+    barrel2 = 0x011c,
+    cannon = 0x013c,
+    hook = 0x014c,
+    tnt = 0x01b8,
 
     -- Inert
-    0x0168, -- Goal pole
-    0x016c, -- Goal roulette
-    0x0160, -- Goal base
-    0x0164, -- Goal barrel
+    goalPole = 0x0168,
+    goalroulette = 0x016c,
+    goalBase = 0x0160,
+    goalBarrel = 0x0164,
 
-    0x0238, -- Pow
-    0x023c, -- Exploding crate
-    0x0258, -- No Animals Sign
+    pow = 0x0238,
+    explodingCrate = 0x023c,
+    noAnimalsSign = 0x0258,
 }
 
 -- Make sure this list is sorted before initialization.
 _M.GoodSprites = {
     -- Destinations
-    0x0094, -- Area exit
-    0x00b0, -- Goal target
+    areaExit = 0x0094,
+    goalTarget = 0x00b0,
 
-    0x0120, -- Bonus barrel
-    0x0128, -- Hot air balloon
-    0x0140, -- Launch barrel
-    0x0148, -- Animal crate
-    0x0150, -- Invincibility barrel
-    0x0154, -- Midpoint
-    0x015c, -- Banana Coin/Kremkoin/DK Coin
-    0x0170, -- Banana bunch
-    0x0174, -- KONG letters
-    0x0178, -- xUP balloon
+    bonusBarrel = 0x0120,
+    hotAirBalloon = 0x0128,
+    launchBarrel = 0x0140,
+    animalCrate = 0x0148,
+    invincibilityBarrel = 0x0150,
+    midpoint = 0x0154,
+    allCoins = 0x015c, -- Banana Coin/Kremkoin/DK Coin
+    bananaBunch = 0x0170,
+    kongLetter = 0x0174,
+    upBalloon = 0x0178, -- xUP balloon
 
     -- Animals
-    0x0190, -- Squitter
-    0x0194, -- Rattly
-    0x0198, -- Squawks
-    0x019c, -- Rambi
-    0x0304, -- Clapper
+    squitter = 0x0190,
+    rattly = 0x0194,
+    squawks = 0x0198,
+    rambi = 0x019c,
+    clapper = 0x0304,
 
-    0x01a8, -- DK Barrel label
+    dkBarrelLabel = 0x01a8,
 
-    0x01b4, -- Krow's eggs
+    krowEgg = 0x01b4,
 
-    0x0220, -- Flitter (used as unavoidable platforms in some levels)
-    0x02d4, -- Krochead (red and green)
+    flitter = 0x0220,
+    krocheadAllColors = 0x02d4,
 }
 
 -- Currently not used.
 _M.BadSprites = {
     -- Baddies
-    0x006c, -- Kannon
-    0x01ac, -- Klobber (yellow and green)
-    0x01d0, -- Kannon's fodder (Ball/barrel)
-    0x01d8, -- Krusha
-    0x01dc, -- Click-Clack
-    0x01e4, -- Neek
-    0x01ec, -- Klomp
-    0x01e8, -- Klobber (awake)
-    0x01f0, -- Klampon
-    0x01f8, -- Flotsam
-    0x0200, -- Klinger
-    0x0208, -- Puftup
-    0x0218, -- Zinger (red and yellow)
-    0x0214, -- Mini-Necky
-    0x020c, -- Lockjaw
-    0x021c, -- Kaboing
-    0x0224, -- Krow (Boss)
-    0x025c, -- Krook (very large)
+    kannon = 0x006c,
+    klobberAllColors = 0x01ac,
+    kannonFodder = 0x01d0,
+    krusha = 0x01d8,
+    clickClack = 0x01dc,
+    neek = 0x01e4,
+    klomp = 0x01ec,
+    klobberAwake = 0x01e8,
+    klampon = 0x01f0,
+    flotsam = 0x01f8,
+    klinger = 0x0200,
+    puftup = 0x0208,
+    zingerAllColors = 0x0218,
+    miniNecky = 0x0214,
+    lockjaw = 0x020c,
+    kaboing = 0x021c,
+    krow = 0x0224, -- Boss
+    krook = 0x025c,
 }
 
+_M.SpriteNames = {}
+
+function _M.InitSpriteNames()
+    for v,k in pairs(_M.GoodSprites) do
+        _M.SpriteNames[k] = v
+    end
+    for v,k in pairs(_M.BadSprites) do
+        _M.SpriteNames[k] = v
+    end
+    for v,k in pairs(_M.NeutralSprites) do
+        _M.SpriteNames[k] = v
+    end
+end
+
 function _M.InitSpriteList()
-    for i=1,#_M.GoodSprites,1 do
-        _M.Sprites[_M.GoodSprites[i]] = 1
+    for k,v in pairs(_M.GoodSprites) do
+        _M.extSprites[v] = 1
     end
-    for i=1,#_M.BadSprites,1 do
-        _M.Sprites[_M.BadSprites[i]] = -1
+    for k,v in pairs(_M.BadSprites) do
+        _M.extSprites[v] = -1
     end
-    for i=1,#_M.NeutralSprites,1 do
-        _M.Sprites[_M.NeutralSprites[i]] = 0
+    for k,v in pairs(_M.NeutralSprites) do
+        _M.extSprites[v] = 0
     end
 end
 
@@ -108,21 +122,21 @@ _M.ExtNeutralSprites = {
 }
 
 _M.ExtGoodSprites = {
-    0xe0, -- banana
-    0xe1, -- banana
-    0xe2, -- banana
-    0xe3, -- banana
-    0xe4, -- banana
-    0xe5, -- banana
-    0xe6, -- banana
-    0xe7, -- banana
-    0xe8, -- banana
-    0xe9, -- banana
-    0xea, -- banana
-    0xeb, -- banana
-    0xec, -- banana
-    0xed, -- banana
-    0xee, -- banana
+    banana01 = 0xe0, -- banana
+    banana02 = 0xe1, -- banana
+    banana03 = 0xe2, -- banana
+    banana04 = 0xe3, -- banana
+    banana05 = 0xe4, -- banana
+    banana06 = 0xe5, -- banana
+    banana07 = 0xe6, -- banana
+    banana08 = 0xe7, -- banana
+    banana09 = 0xe8, -- banana
+    banana10 = 0xe9, -- banana
+    banana11 = 0xea, -- banana
+    banana12 = 0xeb, -- banana
+    banana13 = 0xec, -- banana
+    banana14 = 0xed, -- banana
+    banana15 = 0xee, -- banana
 }
 
 -- Currently not used.
@@ -130,14 +144,14 @@ _M.ExtBadSprites = {
 }
 
 function _M.InitExtSpriteList()
-    for i=1,#_M.ExtGoodSprites,1 do
-        _M.extSprites[_M.ExtGoodSprites[i]] = 1
+    for k,v in pairs(_M.ExtGoodSprites) do
+        _M.extSprites[v] = 1
     end
-    for i=1,#_M.ExtBadSprites,1 do
-        _M.extSprites[_M.ExtBadSprites[i]] = -1
+    for k,v in pairs(_M.ExtBadSprites) do
+        _M.extSprites[v] = -1
     end
-    for i=1,#_M.ExtNeutralSprites,1 do
-        _M.extSprites[_M.ExtNeutralSprites[i]] = 0
+    for k,v in pairs(_M.ExtNeutralSprites) do
+        _M.extSprites[v] = 0
     end
 end
 

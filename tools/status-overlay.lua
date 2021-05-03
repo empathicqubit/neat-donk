@@ -9,7 +9,7 @@ print(warn)
 local util = dofile(base.."/util.lua")()
 local mem = dofile(base.."/mem.lua")
 local spritelist = dofile(base.."/spritelist.lua")
-local game = dofile(base.."/game.lua")
+local game = dofile(base.."/game.lua")()
 local config = dofile(base.."/config.lua")
 
 spritelist.InitSpriteList()

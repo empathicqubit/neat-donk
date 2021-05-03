@@ -54,6 +54,7 @@ Located at [tools/bsnes-launcher.lua](tools/bsnes-launcher.lua), this script giv
 * [Serpent](https://github.com/pkulchenko/serpent)
 * [LibDeflate](https://github.com/SafeteeWoW/LibDeflate)
 * [watchexec](https://github.com/watchexec/watchexec/blob/main/LICENSE)
+* [Billiam's Promise library](https://github.com/Billiam/promise.lua)
 
 ## TODO
 

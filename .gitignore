@@ -1,3 +1,5 @@
+*.lsmv
+!pool/*.lsmv
 *.log
 catchem/
 state/

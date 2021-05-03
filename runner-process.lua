@@ -169,5 +169,6 @@ outFile:close()
 print(string.format('Wrote init to output at %d', ts))
 
 waiter:next(waitLoop):catch(function(error)
-    print('ERROR: '..error)
+    print('Runner process error: '..error)
+    io.stderr:write('Runner process error: '..error..'\n')
 end)

@@ -6,8 +6,16 @@ local _M = {
         verticalPointer = 0xc414,
         tiledataPointer = 0x7e0098,
         haveBoth = 0x7e08c2,
+        ---Height in game units for vertical levels, width for horizontal
+        areaLength = 0x7e17b4,
+        ---This is always the traditional width no matter the level type
+        areaWidth = 0x7e0afc,
+        ---This is always the traditional height no matter the level type
+        areaHeight = 0x7e0afe,
         cameraX = 0x7e17ba,
         cameraY = 0x7e17c0,
+        cameraX2 = 0x7e0ad7,
+        cameraY2 = 0x7e0adb,
         leadChar = 0x7e08a4,
         partyX = 0x7e0a2a,
         partyY = 0x7e0a2c,

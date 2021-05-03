@@ -1,12 +1,14 @@
 --Notes here
-local memory, bit, memory2, input = memory, bit, memory2, input
+local memory, bit, memory2, input, callback, movie = memory, bit, memory2, input, callback, movie
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
+local Promise = nil
+
+local util = nil
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local config = dofile(base.."/config.lua")
 local spritelist = dofile(base.."/spritelist.lua")
-local util = dofile(base.."/util.lua")()
 local mem = dofile(base.."/mem.lua")
 local _M = {
     leader = 0,
@@ -39,6 +41,27 @@ function _M.getPositions()
 	_M.screenY = (_M.partyY-256-_M.cameraY)*2
 end
 
+function _M.setPartyPosition(x, y)
+    memory.writeword(mem.addr.partyX, x)
+    memory.writeword(mem.addr.partyY, y)
+    _M.setSpritePosition(0, x, y)
+    _M.setSpritePosition(1, x, y)
+end
+
+function _M.setCameraPosition(x, y)
+    memory.writeword(mem.addr.cameraX, x)
+    memory.writeword(mem.addr.cameraY, y)
+    memory.writeword(mem.addr.cameraX2, x)
+    memory.writeword(mem.addr.cameraY2, y)
+end
+
+function _M.setSpritePosition(index, x, y)
+    local offsets = mem.offset.sprite
+    local spriteBase = mem.addr.spriteBase + index * mem.size.sprite
+    memory.writeword(spriteBase + offsets.x, x)
+    memory.writeword(spriteBase + offsets.y, y)
+end
+
 function _M.getBananas()
 	local bananas = memory.readword(0x7e08bc)
 	return bananas
@@ -52,6 +75,126 @@ end
 function _M.getKremCoins()
     local krem = memory.readword(mem.addr.kremcoins)
     return krem
+end
+
+function _M.getAreaWidth()
+    return memory.readword(mem.addr.areaWidth) + 256
+end
+
+function _M.getAreaHeight()
+    return memory.readword(mem.addr.areaHeight)
+end
+
+function _M.getAreaLength()
+    return memory.readword(mem.addr.areaLength)
+end
+
+local onFrameAdvancedQueue = {}
+function _M.advanceFrame()
+    local promise = Promise.new()
+    table.insert(onFrameAdvancedQueue, promise)
+    return promise
+end
+
+local function processFrameAdvanced()
+    for i=#onFrameAdvancedQueue,1,-1 do
+        table.remove(onFrameAdvancedQueue, i):resolve()
+    end
+end
+
+local onSetRewindQueue = {}
+function _M.setRewindPoint()
+    local promise = Promise.new()
+    table.insert(onSetRewindQueue, promise)
+    movie.unsafe_rewind()
+    return promise
+end
+
+local function processSetRewind(state)
+    for i=#onSetRewindQueue,1,-1 do
+        table.remove(onSetRewindQueue, i):resolve(state)
+    end
+end
+
+local onRewindQueue = {}
+function _M.rewind(rew)
+    local promise = Promise.new()
+    movie.unsafe_rewind(rew)
+    table.insert(onRewindQueue, promise)
+    return promise
+end
+
+local function processRewind()
+    for i=#onRewindQueue,1,-1 do
+        local promise = table.remove(onRewindQueue, i)
+        promise:resolve()
+    end
+end
+
+local function findPreferredExitLoop(frame, searchX, searchY, found, uniqueExits)
+    return _M.advanceFrame():next(function()
+        frame = frame + 1
+        if frame % 2 ~=0 then
+            return
+        end
+
+        local areaWidth = _M.getAreaWidth()
+        memory.writebyte(0x7e19ce, 0x16)
+        memory.writebyte(0x7e0e12, 0x99)
+        memory.writebyte(0x7e0e70, 0x99)
+        local sprites = _M.getSprites()
+        for i=1,#sprites,1 do
+            local sprite = sprites[i]
+            local name = spritelist.SpriteNames[sprite.control]
+            if sprite.control == spritelist.GoodSprites.goalTarget or
+                sprite.control == spritelist.GoodSprites.areaExit then
+                found = true
+                uniqueExits[sprite.y * areaWidth + sprite.x] = sprite
+            end
+        end
+        _M.setPartyPosition(searchX, searchY)
+        _M.setCameraPosition(searchX, searchY)
+        searchX = searchX + 0x100
+
+        if searchX > areaWidth then
+            searchX = 0
+            searchY = searchY + 0xe0
+            if searchY > _M.getAreaHeight() then
+                table.sort(uniqueExits, function(a, b)
+                    return a.control < b.control
+                end)
+
+                -- Return upper right corner if we can't find anything
+                if found then
+                    for id,sprite in pairs(uniqueExits) do
+                        return { x = sprite.x, y = sprite.y }
+                    end
+                else
+                    return { x = areaWidth, y = 0}
+                end
+            end
+        end
+    end):next(function(ret)
+        if ret == nil then
+            return findPreferredExitLoop(frame, searchX, searchY, found, uniqueExits)
+        else
+            return ret
+        end
+    end)
+end
+
+function _M.findPreferredExit()
+    local point = nil
+    local result = nil
+    return _M.setRewindPoint():next(function(p)
+        point = p
+        return findPreferredExitLoop(0, 0, 0, false, {})
+    end):next(function(r)
+        result = r
+        return _M.rewind(point)
+    end):next(function()
+        return result
+    end)
 end
 
 function _M.getGoalHit()
@@ -454,7 +597,16 @@ local function registerHandler(space, regname, addr, callback)
     })
 end
 
+local inputHandler = nil
+local setRewindHandler = nil
+local rewindHandler = nil
 function _M.unregisterHandlers()
+    callback.unregister('input', inputHandler)
+    callback.unregister('set_rewind', setRewindHandler)
+    callback.unregister('post_rewind', rewindHandler)
+    inputHandler = nil
+    setRewindHandler = nil
+    rewindHandler = nil
     for i=#handlers,1,-1 do
         local handler = table.remove(handlers, i)
         handler.unregisterFn(handler.space, handler.addr, handler.fn)
@@ -462,6 +614,13 @@ function _M.unregisterHandlers()
 end
 
 function _M.registerHandlers()
+    if inputHandler ~= nil then
+        error("Only call register handlers once")
+    end
+
+    inputHandler = callback.register('input', processFrameAdvanced)
+    setRewindHandler = callback.register('set_rewind', processSetRewind)
+    rewindHandler = callback.register('post_rewind', processRewind)
     registerHandler(memory2.BUS, 'registerwrite', 0xb517b2, processAreaLoad)
     registerHandler(memory2.WRAM, 'registerread', 0x06b1, processMapLoad)
     for i=2,22,1 do
@@ -469,4 +628,10 @@ function _M.registerHandlers()
     end
 end
 
-return _M
+return function(promise)
+    Promise = promise
+    if util == nil then
+        util = dofile(base.."/util.lua")(Promise)
+    end
+    return _M
+end

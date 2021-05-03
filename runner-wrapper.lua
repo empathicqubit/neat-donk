@@ -102,7 +102,9 @@ end
 return function(promise)
     -- FIXME Should this be a global???
     Promise = promise
-    util = dofile(base.."/util.lua")(Promise)
+    if util == nil then
+        util = dofile(base.."/util.lua")(Promise)
+    end
     -- FIXME Maybe don't do this in the "constructor"?
     if util.isWin then
         util.downloadFile('https://github.com/watchexec/watchexec/releases/download/1.13.1/watchexec-1.13.1-x86_64-pc-windows-gnu.zip', base..'/watchexec.zip')
