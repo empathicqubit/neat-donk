@@ -584,6 +584,7 @@ local function processMapLoad()
     for i=#mapLoadedQueue,1,-1 do
         table.remove(mapLoadedQueue, i)()
     end
+    areaLoadedQueue = {} -- We clear this because it doesn't make any sense after the map screen loads
 end
 
 local handlers = {}
@@ -622,7 +623,7 @@ function _M.registerHandlers()
     setRewindHandler = callback.register('set_rewind', processSetRewind)
     rewindHandler = callback.register('post_rewind', processRewind)
     registerHandler(memory2.BUS, 'registerwrite', 0xb517b2, processAreaLoad)
-    registerHandler(memory2.WRAM, 'registerread', 0x06b1, processMapLoad)
+    registerHandler(memory2.WRAM, 'registerwrite', 0x069b, processMapLoad)
     for i=2,22,1 do
         registerHandler(memory2.WRAM, 'registerwrite', bit.band(mem.addr.spriteBase + mem.size.sprite * i, 0xffff), processEmptyHit)
     end

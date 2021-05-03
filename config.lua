@@ -18,12 +18,15 @@ _M.ROM = _M.ScriptDir .. "/rom.sfc"
 --]]
 _M.State = {
     -- W1.1 Pirate Panic
-	"PiratePanic.lsmv",
-	"PiratePanicDitch.lsmv",
-	"PiratePanicKremcoin.lsmv",
+	"PiratePanic.lsmv", -- [1]
+	"PiratePanicDitch.lsmv", -- [2]
+	"PiratePanicKremcoin.lsmv", --[3]
+
+    -- W1.2 Mainbrace Mayhem
+    "MainbraceMayhem.lsmv", -- [4]
 }
 
-_M.Filename = _M.PoolDir .. _M.State[1]
+_M.Filename = _M.PoolDir .. _M.State[4]
 
 --[[
 	Start game with specific powerup.
@@ -37,7 +40,7 @@ _M.StartPowerup = 0
 
 _M.NeatConfig = {
 DisableSound = false,
-Threads = 7,
+Threads = 1,
 --Filename = "DP1.state",
 SaveFile = _M.Filename .. ".pool",
 

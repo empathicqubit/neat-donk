@@ -576,7 +576,7 @@ local function mainLoop(_M, genome)
         end
 
         local areaInfo = _M.areaInfo[_M.currentArea]
-        if areaInfo ~= nil then
+        if areaInfo ~= nil and game.partyY ~= 0 and game.partyX ~= 0 then
             local exitDist = math.floor(math.sqrt((areaInfo.preferredExit.y - game.partyY) ^ 2 + (areaInfo.preferredExit.x - game.partyX) ^ 2))
             if exitDist < areaInfo.shortest then
                 areaInfo.shortest = exitDist
@@ -762,7 +762,7 @@ local function saveLoadInput(_M)
         _M.saveLoadFile = config.NeatConfig.SaveFile
         return
     end
-    if helddown == nil then
+    if _M.helddown == nil then
         local mapping = {
             backslash = "\\",
             colon = ":",
@@ -800,7 +800,7 @@ local function saveLoadInput(_M)
             end
             if k == "back" then
                 config.NeatConfig.SaveFile = config.NeatConfig.SaveFile:sub(1, #config.NeatConfig.SaveFile-1)
-                helddown = k
+                _M.helddown = k
                 goto continue
             end
             local m = k
@@ -811,11 +811,11 @@ local function saveLoadInput(_M)
                 goto continue
             end
             config.NeatConfig.SaveFile = config.NeatConfig.SaveFile..m
-            helddown = k
+            _M.helddown = k
             ::continue::
         end
-    elseif helddown ~= nil and inputs[helddown]["value"] ~= 1 then
-        helddown = nil
+    elseif _M.helddown ~= nil and inputs[_M.helddown]["value"] ~= 1 then
+        _M.helddown = nil
     end
 end
 
