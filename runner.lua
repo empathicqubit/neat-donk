@@ -287,7 +287,7 @@ local function displayForm(_M)
 	gui.text(230, 5, "Genome: " .. _M.currentGenomeIndex)
 	gui.text(130, 30, "Max: " .. math.floor(_M.maxFitness))
 	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
-	gui.text(5, 65, "Bananas: " .. (game.getBananas() - _M.startBananas))
+	gui.text(5, 65, "Bananas: " .. _M.totalBananas)
 	gui.text(5, 80, "KONG: " .. (game.getKong() - _M.startKong))
     gui.text(5, 95, "Krem: " .. (game.getKremCoins() - _M.startKrem))
 	gui.text(130, 65, "Coins: " .. (game.getCoins() - _M.startCoins))
@@ -488,7 +488,8 @@ local function initializeRun(_M)
         end)
         game.clearJoypad()
         _M.startKong = game.getKong()
-        _M.startBananas = game.getBananas()
+        _M.totalBananas = 0
+        _M.lastBananas = game.getBananas()
         _M.startKrem = game.getKremCoins()
         _M.lastKrem = _M.startKrem
         _M.startCoins = game.getCoins()
@@ -608,6 +609,13 @@ local function mainLoop(_M, genome)
             _M.lastKrem = krem
             _M.timeout = _M.timeout + 60 * 10
         end
+
+        local currentBananas = game.getBananas()
+        local moreBananas = currentBananas - _M.lastBananas
+        if moreBananas > 0 then
+            _M.totalBananas = _M.totalBananas + moreBananas
+        end
+        _M.lastBananas = currentBananas
         
         _M.timeout = _M.timeout - 1
 
@@ -624,14 +632,13 @@ local function mainLoop(_M, genome)
         -- Timeout calculations beyond this point
         -- Manipulating the timeout value won't have
         -- any effect
-        local bananas = game.getBananas() - _M.startBananas
         local coins = game.getCoins() - _M.startCoins
         local kong = game.getKong()
 
-        message(_M, string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", bananas, coins, krem, kong))
+        message(_M, string.format("Bananas: %d, coins: %d, Krem: %d,  KONG: %d", _M.totalBananas, coins, krem, kong))
 
-        local bananaCoinsFitness = (krem * 100) + (kong * 60) + (bananas * 50) + (coins * 0.2)
-        if (bananas + coins) > 0 then 
+        local bananaCoinsFitness = (krem * 100) + (kong * 60) + (_M.totalBananas * 50) + (coins * 0.2)
+        if (_M.totalBananas + coins) > 0 then 
             message(_M, "Bananas, Coins, KONG added " .. bananaCoinsFitness .. " fitness")
         end
 
@@ -880,7 +887,8 @@ return function(promise)
         timeout = 0,
         bumps = 0,
         startKong = 0,
-        startBananas = 0,
+        lastBananas = 0,
+        totalBananas = 0,
         startKrem = 0,
         lastKrem = 0,
         startCoins = 0,
