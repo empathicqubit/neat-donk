@@ -11,7 +11,6 @@ config.lua
 *.srm
 *.sfc
 *.bst
-watchexec*
 namedpipe*
 build/
 .VSCodeCounter/

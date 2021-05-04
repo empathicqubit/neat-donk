@@ -54,11 +54,14 @@ function _M.doCmd(...)
     return _M.scrapeCmd('*a', ...)
 end
 
--- FIXME linux
 function _M.openReadPipe(name)
-    local cmd = 'cd /d "'..base..'" && "'..base..'/namedpipe/createAndReadPipe.exe" "'..name..'"'
-    print(cmd)
-    return io.popen(cmd, 'r')
+    if _M.isWin then
+        local cmd = 'cd /d "'..base..'" && "'..base..'/namedpipe/createAndReadPipe.exe" "'..name..'"'
+        print(cmd)
+        return io.popen(cmd, 'r')
+    else
+        error('Not implemented')
+    end
 end
 
 --- Download a url
