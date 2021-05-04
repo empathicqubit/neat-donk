@@ -104,20 +104,9 @@ function _M.closeCmd(handle)
     end
 end
 
-function _M.waitForFiles(filenames, count, wild)
-    local promise = Promise.new()
-    promise:resolve()
-
+function _M.waitForFiles(filenames)
     if type(filenames) == 'string' then
-        if wild == nil then
-            wild = filenames
-        end
-
         filenames = {filenames}
-    end
-
-    if count == nil then
-        count = #filenames
     end
 
     local poppet = nil
@@ -129,46 +118,75 @@ function _M.waitForFiles(filenames, count, wild)
         poppet = _M.popenCmd(cmd, base)
 
         poppet:read("*l")
-    else
-        local watchCmd = ''
-        if count == 1 then
-            watchCmd = [[which inotifywait >/dev/null && { inotifywait -q -e close_write ']]..filenames[1]..[[' || exit 0 ; }]]
-        else
-            watchCmd = [[bash <<'EOF'
-COUNT=]]..count..[[ 
-FILENAMES=(']]..table.concat(filenames, "' '")..[[')
-declare -A SEEN
-((I = 0))
-set -m
-which inotifywait >/dev/null
-( inotifywait -q -m -e close_write "${FILENAMES[@]}" | while read LINE ; do
-    SEEN["$LINE"]=1
-    TOTAL=${#SEEN[@]}
-    if ((TOTAL == COUNT)) ; then 
-        kill -s TERM 0
-    fi
-done ) &
-wait
-EOF]]
-        end
-        poppet = _M.popenCmd(watchCmd)
-    end
 
-    return promise:next(function()
-        if _M.isWin then
+        local waiters = {}
+        for i=1,#filenames,1 do
+            local waiter = Promise.new()
+            table.insert(waiters, waiter)
+        end
+
+        -- To defer the check of the files
+        local promise = Promise.new()
+        promise:resolve()
+        promise:next(function()
             local i = 1
-            while i <= count do
+            while i <= filenames do
                 local line = poppet:read("*l")
                 for chr in line:gmatch(";") do
                     i = i + 1
                 end
                 i = i + 1
             end
-        else
-            poppet:read("*a")
-            _M.closeCmd(poppet)
+            -- FIXME synchronous
+            for i=1,#filenames,1 do
+                waiters[i]:resolve(filenames[i])
+            end
+        end):catch(function(reason)
+            for i=1,#filenames,1 do
+                waiters[i]:reject(reason)
+            end
+        end)
+
+        return waiters
+    else
+        local watchCmd = [[bash ]]..base..[[/watch.sh ']]..table.concat(filenames, [[' ']])..[[']]
+        poppet = _M.popenCmd(watchCmd)
+
+        local waiters = {}
+        for i=1,#filenames,1 do
+            local waiter = Promise.new()
+            table.insert(waiters, waiter)
         end
-    end)
+
+        local finished = 0
+        local function waitLoop()
+            local promise = Promise.new()
+            promise:resolve()
+            return promise:next(function()
+                local line = poppet:read("*l")
+                finished = finished + 1
+                local filename = line:gsub('%s+[^%s]+$', "")
+                for i=1,#filenames,1 do
+                    if filename == filenames[i] then
+                        waiters[i]:resolve(filenames[i])
+                        break
+                    end
+                end
+
+                if finished ~= #filenames then
+                    return waitLoop()
+                end
+            end)
+        end
+
+        waitLoop():catch(function(reason)
+            for i=1,#waiters,1 do
+                waiters:reject(reason)
+            end
+        end)
+
+        return waiters
+    end
 end
 
 function _M.table_to_string(tbl)

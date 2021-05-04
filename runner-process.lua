@@ -139,7 +139,7 @@ local function waitLoop()
             waiter = Promise.new()
             waiter:resolve()
         else
-            waiter = util.waitForFiles(inputFilePath)
+            waiter = util.waitForFiles(inputFilePath)[1]
         end
 
         -- Write the result
@@ -156,7 +156,7 @@ if util.isWin then
     waiter = Promise.new()
     waiter:resolve()
 else
-    waiter = util.waitForFiles(inputFilePath)
+    waiter = util.waitForFiles(inputFilePath)[1]
 end
 
 local sec, usec = utime()

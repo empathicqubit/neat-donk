@@ -39,7 +39,7 @@ _M.Filename = _M.PoolDir .. _M.State[4]
 _M.StartPowerup = 0
 
 _M.NeatConfig = {
-DisableSound = false,
+DisableSound = true,
 Threads = 7,
 --Filename = "DP1.state",
 SaveFile = _M.Filename .. ".pool",

@@ -87,7 +87,7 @@ local function launchChildren(_M, count)
             APPDATA = settingsDir,
         }
 
-        local child = util.waitForFiles(outputFileName)
+        local child = util.waitForFiles(outputFileName)[1]
 
         local cmd = '"'.._M.hostProcess..'" "--rom='..config.ROM..'" --unpause "--lua='..base..'/runner-process.lua"'
         local poppet = util.popenCmd(cmd, nil, envs)
@@ -170,12 +170,11 @@ return function(promise)
                 table.insert(outputFileNames, outputPrefix..i)
             end
 
-            local waiter = util.waitForFiles(outputFileNames, nil, tmpFileName.."_output_*")
+            local waiters = util.waitForFiles(outputFileNames)
 
             message(_M, 'Setting up child processes')
 
             for i=1,#speciesSlice,1 do
-
                 local inputFileName = tmpFileName.."_input_"..i
                 local inputFile = io.open(inputFileName, 'w')
                 inputFile:write(serpent.dump({speciesSlice[i], generationIdx}))
@@ -184,54 +183,51 @@ return function(promise)
 
             message(_M, 'Waiting for child processes to finish')
 
-            return waiter
-        end):next(function()
-            message(_M, 'Child processes finished')
-
-            local finished = 0
-            for i=1,#speciesSlice,1 do
-                message(_M, "Processing output "..i)
-                local outputFileName = tmpFileName..'_output_'..i
-                local outputFile = io.open(outputFileName, "r")
-                local line = ""
-                repeat
-                    local ok, obj = serpent.load(line)
-                    if not ok then
-                        goto continue
-                    end
-
-                    if obj == nil then
-                        goto continue
-                    end
-
-                    if obj.type == 'onMessage' then
-                        message(_M, obj.msg, obj.color)
-                    elseif obj.type == 'onLoad' then
-                        load(_M, obj.filename)
-                    elseif obj.type == 'onSave' then
-                        save(_M, obj.filename)
-                    elseif obj.type == 'onGenome' then
-                        for i=1,#speciesSlice,1 do
-                            local s = speciesSlice[i]
-                            if s.id == obj.speciesId then
-                                s.genomes[obj.genomeIndex] = obj.genome
-                                break
-                            end
+            for i=1,#waiters,1 do
+                waiters[i] = waiters[i]:next(function(outputFileName)
+                    message(_M, "Processing output "..i)
+                    local outputFile = io.open(outputFileName, "r")
+                    local line = ""
+                    repeat
+                        local ok, obj = serpent.load(line)
+                        if not ok then
+                            goto continue
                         end
-                        genomeCallback(obj.genome, obj.index)
-                    elseif obj.type == 'onFinish' then
-                        finished = finished + 1
-                        if finished == #speciesSlice then
-                            outputFile:close()
+
+                        if obj == nil then
+                            goto continue
+                        end
+
+                        if obj.type == 'onMessage' then
+                            message(_M, obj.msg, obj.color)
+                        elseif obj.type == 'onLoad' then
+                            load(_M, obj.filename)
+                        elseif obj.type == 'onSave' then
+                            save(_M, obj.filename)
+                        elseif obj.type == 'onGenome' then
+                            for i=1,#speciesSlice,1 do
+                                local s = speciesSlice[i]
+                                if s.id == obj.speciesId then
+                                    s.genomes[obj.genomeIndex] = obj.genome
+                                    break
+                                end
+                            end
+                            genomeCallback(obj.genome, obj.index)
+                        elseif obj.type == 'onFinish' then
+                            message(_M, "Finished processing output "..i)
                             return
                         end
-                    end
 
-                    ::continue::
-                    line = outputFile:read()
-                until(line == "" or line == nil)
+                        ::continue::
+                        line = outputFile:read()
+                    until(line == "" or line == nil)
+                    error("Child process "..i.." never finished")
+                end)
             end
-            error(string.format("Some processes never finished? Saw %d terminations.", finished))
+
+            return Promise.all(table.unpack(waiters))
+        end):next(function()
+            message(_M, 'Child processes finished')
         end)
     end
 
