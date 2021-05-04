@@ -51,6 +51,9 @@ end)
 pool.run():next(function()
     print("The pool finished running!!!")
 end):catch(function(error)
+    if type(error) == "table" then
+        error = "\n"..table.concat(error, "\n")
+    end
     io.stderr:write(string.format("There was a problem running the pool: %s", error))
     print(string.format("There was a problem running the pool: %s", error))
 end)

@@ -126,8 +126,7 @@ end
 
 local function processRewind()
     for i=#onRewindQueue,1,-1 do
-        local promise = table.remove(onRewindQueue, i)
-        promise:resolve()
+        table.remove(onRewindQueue, i):resolve()
     end
 end
 

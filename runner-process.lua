@@ -10,15 +10,9 @@ callback.register('timer', function()
 end)
 set_timer_timeout(1)
 
-
 local Runner = dofile(base.."/runner.lua")
 local serpent = dofile(base.."/serpent.lua")
 local util = dofile(base.."/util.lua")(Promise)
-
-local inputFilePath = os.getenv("RUNNER_INPUT_FILE")
-local outputFilePath = os.getenv("RUNNER_OUTPUT_FILE")
-
-local outContents = {}
 
 local statusLine = nil
 local statusColor = 0x0000ff00
@@ -27,20 +21,40 @@ local species = nil
 local speciesId = -1
 local generationIndex = nil
 
+local inputPipeName = os.getenv("RUNNER_INPUT_PIPE")
+local outputFilePath = os.getenv("RUNNER_OUTPUT_FILE")
+
+print('Opening input pipe '..inputPipeName)
+local inputPipe = util.openReadPipe(inputPipeName)
+if inputPipe == nil then
+    error('Error opening input file')
+end
+print('Opened input pipe '..inputPipeName)
+
+print('Opening output file '..outputFilePath)
+local outputFile = nil
+while outputFile == nil do
+    outputFile = io.open(outputFilePath, 'w')
+end
+print('Opened output file '..outputFilePath)
+
+local function writeResponse(object)
+    outputFile:write(serpent.dump(object).."\n")
+    outputFile:flush()
+end
+
 local runner = Runner(Promise)
 runner.onMessage(function(msg, color)
     statusLine = msg
     statusColor = color
     print(msg)
-    table.insert(
-        outContents,
-        serpent.dump({
-            type = 'onMessage',
-            speciesId = speciesId,
-            msg = msg,
-            color = color,
-        })
-    )
+
+    writeResponse({
+        type = 'onMessage',
+        speciesId = speciesId,
+        msg = msg,
+        color = color,
+    })
 end)
 
 runner.onRenderForm(function(form)
@@ -60,115 +74,77 @@ runner.onRenderForm(function(form)
 end)
 
 runner.onSave(function(filename)
-    table.insert(
-        outContents,
-        serpent.dump({
-            type = 'onSave',
-            filename = filename,
-            speciesId = speciesId,
-        })
-    )
+    writeResponse({
+        type = 'onSave',
+        filename = filename,
+        speciesId = speciesId,
+    })
 end)
 
 runner.onLoad(function(filename)
-    table.insert(
-        outContents,
-        serpent.dump({
-            type = 'onLoad',
-            filename = filename,
-            speciesId = speciesId,
-        })
-    )
+    writeResponse({
+        type = 'onLoad',
+        filename = filename,
+        speciesId = speciesId,
+    })
 end)
 
-local function waitLoop()
-    local inputData = nil
-    local ok = false
-    while not ok or inputData == nil or speciesId == inputData[1].id do
-        local inputFile = io.open(inputFilePath, 'r')
-        ok, inputData = serpent.load(inputFile:read('*a'))
-        inputFile:close()
+local function waitLoop(inputLine)
+    return util.promiseWrap(function()
+        local ok, inputData = serpent.load(inputLine)
 
-        if not ok then
+        if not ok or inputData == nil or speciesId == inputData[1].id then
             print("Deserialization error")
+            return
         end
-    end
 
-    print('Received input from master process')
+        print('Received input from master process')
 
-    species = inputData[1]
+        species = inputData[1]
 
-    speciesId = species.id
+        speciesId = species.id
 
-    generationIndex = inputData[2]
+        generationIndex = inputData[2]
 
-    outContents = {}
+        print('Running')
 
-    print('Running')
-
-    return runner.run(
-        species,
-        generationIndex,
-        function(genome, index)
-            table.insert(
-                outContents,
-                serpent.dump({
+        return runner.run(
+            species,
+            generationIndex,
+            function(genome, index)
+                writeResponse({
                     type = 'onGenome',
                     genome = genome,
                     genomeIndex = index,
                     speciesId = speciesId,
                 })
-            )
-        end
-    ):next(function()
-        table.insert(
-            outContents,
-            serpent.dump({
+            end
+        ):next(function()
+            writeResponse({
                 type = 'onFinish',
                 speciesId = speciesId,
             })
-        )
-
-        -- Truncate the input file to reduce the amount of time
-        -- wasted if we reopen it too early
-        local inputFile = io.open(inputFilePath, "w")
-        inputFile:close()
-
-        local waiter = nil
-        if util.isWin then
-            waiter = Promise.new()
-            waiter:resolve()
-        else
-            waiter = util.waitForFiles(inputFilePath)
-        end
-
-        -- Write the result
-        local outFile = io.open(outputFilePath, "w")
-        outFile:write(table.concat(outContents, "\n"))
-        outFile:close()
-
-        return waiter
+        end)
+    end):next(function()
+        return inputPipe:read("*l")
     end):next(waitLoop)
-end
-
-local waiter = nil
-if util.isWin then
-    waiter = Promise.new()
-    waiter:resolve()
-else
-    waiter = util.waitForFiles(inputFilePath)
 end
 
 local sec, usec = utime()
 local ts = sec * 1000000 + usec
 
-local outFile = io.open(outputFilePath, "w")
-outFile:write(serpent.dump({ type = 'onInit', ts = ts }))
-outFile:close()
+local waiter = util.promiseWrap(function()
+    return inputPipe:read("*l")
+end)
+
+writeResponse({ type = 'onInit', ts = ts })
 
 print(string.format('Wrote init to output at %d', ts))
 
 waiter:next(waitLoop):catch(function(error)
+    if type(error) == "table" then
+        error = "\n"..table.concat(error, "\n")
+    end
     print('Runner process error: '..error)
     io.stderr:write('Runner process error: '..error..'\n')
 end)

@@ -8,6 +8,12 @@ local _M = {}
 
 _M.isWin = package.config:sub(1, 1) == '\\'
 
+function _M.promiseWrap(next)
+    local promise = Promise.new()
+    promise:resolve()
+    return promise:next(next)
+end
+
 --- Echo a command, run it, and return the file handle
 --- @param cmd string The command to execute
 --- @param workdir string The working directory
@@ -48,6 +54,13 @@ function _M.doCmd(...)
     return _M.scrapeCmd('*a', ...)
 end
 
+-- FIXME linux
+function _M.openReadPipe(name)
+    local cmd = 'cd /d "'..base..'" && "'..base..'/namedpipe/createAndReadPipe.exe" "'..name..'"'
+    print(cmd)
+    return io.popen(cmd, 'r')
+end
+
 --- Download a url
 --- @param url string URI of resource to download
 --- @param dest string File to save resource to
@@ -59,9 +72,8 @@ end
 --- @param zipfile string The ZIP file path
 --- @param dest string Where to unzip the ZIP file. Beware ZIP bombs.
 function _M.unzip (zipfile, dest)
-    return _M.doCmd('unzip "'..zipfile..'" -d "'..dest..
-    '" 2>&1 || tar -C "'..dest..'" -xvf "'..zipfile..
-    '" 2>&1', nil)
+    return _M.doCmd('tar -xvf "'..zipfile..'" 2>&1 || unzip -n "'..zipfile..'" -d "'..dest..
+        '" 2>&1', dest)
 end
 
 --- Create a directory
@@ -100,75 +112,8 @@ function _M.closeCmd(handle)
         return
     end
     if code ~= 0 then
-        error("The last command failed")
+        error(string.format("The last command failed: %s %d", state, code))
     end
-end
-
-function _M.waitForFiles(filenames, count, wild)
-    local promise = Promise.new()
-    promise:resolve()
-
-    if type(filenames) == 'string' then
-        if wild == nil then
-            wild = filenames
-        end
-
-        filenames = {filenames}
-    end
-
-    if count == nil then
-        count = #filenames
-    end
-
-    local poppet = nil
-    if _M.isWin then
-        local sec, usec = utime()
-        print(string.format('Starting watching file at %d', sec * 1000000 + usec))
-
-        local cmd = '"'..base..'/watchexec/watchexec.exe" "-w" "'..table.concat(filenames, '" "-w" "')..'" "echo" "%WATCHEXEC_WRITTEN_PATH%"'
-        poppet = _M.popenCmd(cmd, base)
-
-        poppet:read("*l")
-    else
-        local watchCmd = ''
-        if count == 1 then
-            watchCmd = [[which inotifywait >/dev/null && { inotifywait -q -e close_write ']]..filenames[1]..[[' || exit 0 ; }]]
-        else
-            watchCmd = [[bash <<'EOF'
-COUNT=]]..count..[[ 
-FILENAMES=(']]..table.concat(filenames, "' '")..[[')
-declare -A SEEN
-((I = 0))
-set -m
-which inotifywait >/dev/null
-( inotifywait -q -m -e close_write "${FILENAMES[@]}" | while read LINE ; do
-    SEEN["$LINE"]=1
-    TOTAL=${#SEEN[@]}
-    if ((TOTAL == COUNT)) ; then 
-        kill -s TERM 0
-    fi
-done ) &
-wait
-EOF]]
-        end
-        poppet = _M.popenCmd(watchCmd)
-    end
-
-    return promise:next(function()
-        if _M.isWin then
-            local i = 1
-            while i <= count do
-                local line = poppet:read("*l")
-                for chr in line:gmatch(";") do
-                    i = i + 1
-                end
-                i = i + 1
-            end
-        else
-            poppet:read("*a")
-            _M.closeCmd(poppet)
-        end
-    end)
 end
 
 function _M.table_to_string(tbl)

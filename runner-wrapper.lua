@@ -23,12 +23,12 @@ for i=1,#temps,1 do
     end
 end
 
-local tmpFileName = tempDir.."/donk_runner_"..
+local pipePrefix = "donk_runner_"..
     string.hex(math.floor(random.integer(0, 0xffffffff)))..
     string.hex(math.floor(random.integer(0, 0xffffffff)))
 
-local inputPrefix = tmpFileName..'_input_'
-local outputPrefix = tmpFileName..'_output_'
+local inputPrefix = pipePrefix..'_input_'
+local outputPrefix = pipePrefix..'_output_'
 
 local function message(_M, msg, color)
     if color == nil then
@@ -69,11 +69,21 @@ end
 ---@param count integer Number of processes needed
 ---@return Promise Promise A promise that resolves when all the processes are ready
 local function launchChildren(_M, count)
-    local children = {}
-    while #_M.poppets < count do
-        local i = #_M.poppets+1
+    local promises = {}
+    for i=#_M.poppets+1,count,1 do
+        local newOne = {
+            process = nil,
+            output = util.openReadPipe(outputPrefix..i),
+            input = nil,
+        }
+
         local outputFileName = outputPrefix..i
+        local inputPipeName = inputPrefix..i
         local inputFileName = inputPrefix..i
+        if util.isWin then
+            outputFileName = '\\\\.\\pipe\\'..outputFileName
+            inputFileName = '\\\\.\\pipe\\'..inputPipeName
+        end
 
         local settingsDir = nil
         if util.isWin then
@@ -82,21 +92,26 @@ local function launchChildren(_M, count)
         end
 
         local envs = {
-            RUNNER_INPUT_FILE = inputFileName,
+            RUNNER_INPUT_PIPE = inputPipeName,
             RUNNER_OUTPUT_FILE = outputFileName,
             APPDATA = settingsDir,
         }
 
-        local child = util.waitForFiles(outputFileName)
-
         local cmd = '"'.._M.hostProcess..'" "--rom='..config.ROM..'" --unpause "--lua='..base..'/runner-process.lua"'
-        local poppet = util.popenCmd(cmd, nil, envs)
-        table.insert(_M.poppets, poppet)
+        newOne.process = util.popenCmd(cmd, nil, envs)
 
-        table.insert(children, child)
+        -- Wait for init
+        local promise = util.promiseWrap(function()
+            newOne.output:read("*l")
+            while newOne.input == nil do
+                newOne.input = io.open(inputFileName, 'w')
+            end
+        end)
+        table.insert(promises, promise)
+        table.insert(_M.poppets, newOne)
     end
 
-    return Promise.all(table.unpack(children))
+    return Promise.all(table.unpack(promises))
 end
 
 return function(promise)
@@ -107,9 +122,9 @@ return function(promise)
     end
     -- FIXME Maybe don't do this in the "constructor"?
     if util.isWin then
-        util.downloadFile('https://github.com/watchexec/watchexec/releases/download/1.13.1/watchexec-1.13.1-x86_64-pc-windows-gnu.zip', base..'/watchexec.zip')
-        util.unzip(base..'/watchexec.zip', base)
-        os.rename(base..'watchexec-1.13.1-x86_64-pc-windows-gnu', base..'/watchexec')
+        util.downloadFile("https://github.com/psmay/windows-named-pipe-utils/releases/download/v0.1.1/build.zip", base.."/namedpipe.zip")
+        util.unzip(base.."/namedpipe.zip", base)
+        os.rename(base.."/build", "namedpipe")
     end
 
     local _M = {
@@ -152,56 +167,31 @@ return function(promise)
         local promise = Promise.new()
         promise:resolve()
         return promise:next(function()
-            -- Create the input files and output files
-            for i=1,#speciesSlice,1 do
-                local inputFileName = inputPrefix..i
-                local inputFile = io.open(inputFileName, 'a')
-                inputFile:close()
-
-                local outputFileName = outputPrefix..i
-                local outputFile = io.open(outputFileName, 'a')
-                outputFile:close()
-            end
-
             return launchChildren(_M, #speciesSlice)
         end):next(function()
-            local outputFileNames = {}
-            for i=1,#speciesSlice,1 do
-                table.insert(outputFileNames, outputPrefix..i)
-            end
-
-            local waiter = util.waitForFiles(outputFileNames, nil, tmpFileName.."_output_*")
-
             message(_M, 'Setting up child processes')
 
             for i=1,#speciesSlice,1 do
-
-                local inputFileName = tmpFileName.."_input_"..i
-                local inputFile = io.open(inputFileName, 'w')
-                inputFile:write(serpent.dump({speciesSlice[i], generationIdx}))
-                inputFile:close()
+                local inputPipe = _M.poppets[i].input
+                inputPipe:write(serpent.dump({speciesSlice[i], generationIdx}).."\n")
+                inputPipe:flush()
             end
 
             message(_M, 'Waiting for child processes to finish')
 
-            return waiter
-        end):next(function()
-            message(_M, 'Child processes finished')
+            local function readLoop(outputPipe, line)
+                return util.promiseWrap(function()
+                    if line == nil or line == "" then
+                        util.closeCmd(outputPipe)
+                    end
 
-            local finished = 0
-            for i=1,#speciesSlice,1 do
-                message(_M, "Processing output "..i)
-                local outputFileName = tmpFileName..'_output_'..i
-                local outputFile = io.open(outputFileName, "r")
-                local line = ""
-                repeat
                     local ok, obj = serpent.load(line)
                     if not ok then
-                        goto continue
+                        return false
                     end
 
                     if obj == nil then
-                        goto continue
+                        return false
                     end
 
                     if obj.type == 'onMessage' then
@@ -220,18 +210,35 @@ return function(promise)
                         end
                         genomeCallback(obj.genome, obj.index)
                     elseif obj.type == 'onFinish' then
-                        finished = finished + 1
-                        if finished == #speciesSlice then
-                            outputFile:close()
-                            return
-                        end
+                        return true
                     end
 
-                    ::continue::
-                    line = outputFile:read()
-                until(line == "" or line == nil)
+                end):next(function(finished)
+                    if finished then
+                        return
+                    end
+
+                    local line = outputPipe:read("*l")
+                    return readLoop(outputPipe, line)
+                end)
             end
-            error(string.format("Some processes never finished? Saw %d terminations.", finished))
+
+            local waiters = {}
+            for i=1,#speciesSlice,1 do
+                local waiter = util.promiseWrap(function()
+                    local outputPipe = _M.poppets[i].output
+                    local line = outputPipe:read("*l")
+
+                    print("Started receiving output from child process "..i)
+
+                    return readLoop(outputPipe, line)
+                end)
+                table.insert(waiters, waiter)
+            end
+
+            return Promise.all(table.unpack(waiters))
+        end):next(function()
+            message(_M, 'Child processes finished')
         end)
     end
 

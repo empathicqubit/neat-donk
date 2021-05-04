@@ -12,4 +12,6 @@ config.lua
 *.sfc
 *.bst
 watchexec*
+namedpipe*
+build/
 .VSCodeCounter/

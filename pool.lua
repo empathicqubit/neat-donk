@@ -10,7 +10,7 @@ local serpent = dofile(base.."/serpent.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
 
 local hasThreads = 
-	not util.isWin and
+	--not util.isWin and
 		config.NeatConfig.Threads > 1
 
 -- Only the parent should manage ticks!
@@ -399,9 +399,7 @@ local function addToSpecies(child)
 end
 
 local function initializePool()
-	local promise = Promise.new()
-	promise:resolve()
-	return promise:next(function()
+	return util.promiseWrap(function()
 		pool = newPool()
 
 		for i=1,config.NeatConfig.Population do
@@ -420,9 +418,7 @@ local function bytes(x)
 end
 
 local function writeFile(filename)
-	local promise = Promise.new()
-	promise:resolve()
-	return promise:next(function ()
+	return util.promiseWrap(function ()
 		local file = io.open(filename, "w")
 		local dump = serpent.dump(pool)
 		local zlib = libDeflate:CompressDeflate(dump)
@@ -436,9 +432,7 @@ end
 
 -- FIXME This isn't technically asynchronous. Probably can't be though.
 local function loadFile(filename)
-	local promise = Promise.new()
-	promise:resolve()
-	return promise:next(function()
+	return util.promiseWrap(function()
 		message("Loading pool from " .. filename, 0x00999900)
 		local file = io.open(filename, "r")
 		if file == nil then
@@ -699,9 +693,7 @@ local function mainLoop(currentSpecies, topGenome)
 	end
 
 	local slice = pool.species[currentSpecies]
-	local promise = Promise.new()
-	promise:resolve()
-	return promise:next(function()
+	return util.promiseWrap(function()
 		if loadRequested then
 			loadRequested = false
 			currentSpecies = nil
