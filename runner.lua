@@ -330,7 +330,6 @@ local function evaluateNetwork(_M, network, inputs, inputDeltas)
 		message(_M, "Incorrect number of neural network inputs.", 0x00990000)
 		return {}
 	end
-	
 
 	for i=1,Inputs do
 		network.neurons[i].value = inputs[i] * inputDeltas[i]
@@ -382,12 +381,9 @@ end
 local frame = 0
 local lastFrame = 0
 
-local function evaluateCurrent(_M)
+local function evaluateCurrent(_M, inputs, inputDeltas)
 	local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
 	
-	local inputDeltas = {}
-	local inputs, inputDeltas = game.getInputs()
-
 	controller = evaluateNetwork(_M, genome.network, inputs, inputDeltas)
 
 	if controller[6] and controller[7] then
@@ -506,7 +502,9 @@ local function initializeRun(_M)
 
         local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
         generateNetwork(genome)
-        evaluateCurrent(_M)
+
+        local inputs, inputDeltas = game.getInputs()
+        evaluateCurrent(_M, inputs, inputDeltas)
     end)
 end
 
@@ -524,6 +522,7 @@ local function mainLoop(_M, genome)
         if nextArea ~= _M.lastArea then
             _M.lastArea = nextArea
             game.onceAreaLoaded(function()
+                message(_M, 'Loaded area '..nextArea)
                 _M.timeout = _M.timeout + 60 * 5
                 _M.currentArea = nextArea
                 _M.lastArea = _M.currentArea
@@ -555,10 +554,6 @@ local function mainLoop(_M, genome)
             displayGenome(genome)
         end
         
-        if _M.currentFrame%5 == 0 then
-            evaluateCurrent(_M)
-        end
-
         game.getPositions()
         local timeoutConst = 0
         if game.vertical then
@@ -567,13 +562,13 @@ local function mainLoop(_M, genome)
             timeoutConst = config.NeatConfig.TimeoutConstant
         end
 
-        -- Don't punish being launched by barrels
-        -- FIXME Will this skew mine cart levels?
-        if game.getVelocityY() < -2104 then
-            message(_M, "BARREL! ".._M.drawFrame, 0x00ffff00)
-            if _M.timeout < timeoutConst + 60 * 12 then
-                _M.timeout = _M.timeout + 60 * 12
+        if _M.currentFrame%5 == 0 then
+            local inputs, inputDeltas = game.getInputs()
+            if game.bonusScreenDisplayed(inputs) and _M.timeout < timeoutConst then
+                _M.timeout = timeoutConst
             end
+
+            evaluateCurrent(_M, inputs, inputDeltas)
         end
 
         local areaInfo = _M.areaInfo[_M.currentArea]

@@ -24,9 +24,10 @@ _M.State = {
 
     -- W1.2 Mainbrace Mayhem
     "MainbraceMayhem.lsmv", -- [4]
+	"MainbraceMayhemBonus.lsmv", -- [5]
 }
 
-_M.Filename = _M.PoolDir .. _M.State[4]
+_M.Filename = _M.PoolDir .. _M.State[1]
 
 --[[
 	Start game with specific powerup.

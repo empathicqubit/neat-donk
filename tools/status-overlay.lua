@@ -15,6 +15,8 @@ local config = dofile(base.."/config.lua")
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
 
+game.registerHandlers()
+
 local CAMERA_MODE = 0x7e054f
 local DIDDY_X_VELOCITY = 0x7e0e02
 local DIDDY_Y_VELOCITY = 0x7e0e06
@@ -436,12 +438,6 @@ input.keyhook("9", true)
 input.keyhook("0", true)
 
 set_timer_timeout(100 * 1000)
-
-for i=0,22,1 do
-    memory2.BUS:registerwrite(mem.addr.spriteBase + mem.size.sprite * i + mem.offset.sprite.x, function(addr, val)
-        print(memory.getregister('pc'))
-    end)
-end
 
 -- fe0a58 crate: near bunch and klomp on barrels
 -- fe0a58: Crate X position

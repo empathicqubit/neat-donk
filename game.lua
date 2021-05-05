@@ -615,6 +615,17 @@ local function processMapLoad()
     areaLoadedQueue = {} -- We clear this because it doesn't make any sense after the map screen loads
 end
 
+function _M.bonusScreenDisplayed(inputs)
+    local count = 0
+    for i=1,#inputs,1 do
+        if inputs[i] ~= 0 then
+            count = count + 1
+        end
+    end
+
+    return count < 10
+end
+
 local handlers = {}
 local function registerHandler(space, regname, addr, callback)
     table.insert(handlers, { 
