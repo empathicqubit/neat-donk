@@ -732,6 +732,18 @@ local function onLoad(_M, handler)
     table.insert(_M.onLoadHandler, handler)
 end
 
+local function reset(_M)
+    for i=#_M.onResetHandler,1,-1 do
+        _M.onResetHandler[i]()
+    end
+
+    message(_M, "Will be reset once all currently active threads finish", 0x00990000)
+end
+
+local function onReset(_M, handler)
+    table.insert(_M.onResetHandler, handler)
+end
+
 local function keyhook (_M, key, state)
     if state.value == 1 then
         if key == "tab" then
@@ -753,9 +765,8 @@ local function keyhook (_M, key, state)
             _M.helddown = key
             load(_M)
         elseif key == "9" then
-            -- FIXME Event inversion
             _M.helddown = key
-            pool.run(true)
+            reset(_M)
         end
     elseif state.value == 0 then
         _M.helddown = nil
@@ -904,6 +915,7 @@ return function(promise)
         onMessageHandler = {},
         onSaveHandler = {},
         onLoadHandler = {},
+        onResetHandler = {},
         onRenderFormHandler = {},
     }
 
@@ -921,6 +933,10 @@ return function(promise)
 
     _M.onLoad = function(handler)
         onLoad(_M, handler)
+    end
+
+    _M.onReset = function(handler)
+        onReset(_M, handler)
     end
 
     _M.run = function(species, generationIdx, genomeCallback)

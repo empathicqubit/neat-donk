@@ -668,6 +668,10 @@ local function newGeneration()
 	writeFile(_M.saveLoadFile .. ".gen" .. pool.generation .. ".pool")
 end
 
+local function reset()
+	return _M.run(true)
+end
+
 local runner = Runner(Promise)
 runner.onMessage(function(msg, color)
 	message(msg, color)
@@ -678,6 +682,9 @@ end)
 runner.onLoad(function(filename)
 	_M.requestLoad(filename)
 end)
+runner.onReset(function(filename)
+	_M.requestReset()
+end)
 runner.onRenderForm(function(form)
 	processRenderForm(form)
 end)
@@ -687,6 +694,7 @@ local topRequested = false
 
 local loadRequested = false
 local saveRequested = false
+local resetRequested = false
 local function mainLoop(currentSpecies, topGenome)
 	if currentSpecies == nil then
 		currentSpecies = 1
@@ -704,6 +712,11 @@ local function mainLoop(currentSpecies, topGenome)
 		if saveRequested then
 			saveRequested = false
 			return savePool()
+		end
+
+		if resetRequested then
+			resetRequested = false
+			return reset()
 		end
 
 		if topRequested then
@@ -778,6 +791,10 @@ end
 function _M.requestSave(filename)
     _M.saveLoadFile = filename
     saveRequested = true
+end
+
+function _M.requestReset()
+	resetRequested = true
 end
 
 function _M.onMessage(handler)

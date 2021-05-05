@@ -45,6 +45,16 @@ local function onLoad(_M, handler)
     table.insert(_M.onLoadHandler, handler)
 end
 
+local function reset(_M)
+    for i=#_M.onResetHandler,1,-1 do
+        _M.onResetHandler[i]()
+    end
+end
+
+local function onReset(_M, handler)
+    table.insert(_M.onResetHandler, handler)
+end
+
 local function onMessage(_M, handler)
     table.insert(_M.onMessageHandler, handler)
 end
@@ -109,6 +119,7 @@ return function(promise)
 
     local _M = {
         onMessageHandler = {},
+        onResetHandler = {},
         onSaveHandler = {},
         onLoadHandler = {},
         poppets = {},
@@ -141,6 +152,10 @@ return function(promise)
 
     _M.onLoad = function(handler)
         onLoad(_M, handler)
+    end
+
+    _M.onReset = function(handler)
+        onReset(_M, handler)
     end
 
     _M.run = function(speciesSlice, generationIdx, genomeCallback)
@@ -180,6 +195,8 @@ return function(promise)
                         load(_M, obj.filename)
                     elseif obj.type == 'onSave' then
                         save(_M, obj.filename)
+                    elseif obj.type == 'onReset' then
+                        reset(_M)
                     elseif obj.type == 'onGenome' then
                         for i=1,#speciesSlice,1 do
                             local s = speciesSlice[i]

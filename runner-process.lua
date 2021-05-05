@@ -86,6 +86,14 @@ runner.onLoad(function(filename)
     })
 end)
 
+runner.onReset(function(filename)
+    writeResponse({
+        type = 'onReset',
+        filename = filename,
+        speciesId = speciesId,
+    })
+end)
+
 local function waitLoop(inputLine)
     return util.promiseWrap(function()
         local ok, inputData = serpent.load(inputLine)
