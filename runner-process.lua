@@ -91,7 +91,8 @@ local function waitLoop(inputLine)
         local ok, inputData = serpent.load(inputLine)
 
         if not ok or inputData == nil or speciesId == inputData[1].id then
-            print("Deserialization error")
+            io.stderr:write("Deserialization error\n")
+            io.stderr:write(inputLine.."\n")
             return
         end
 

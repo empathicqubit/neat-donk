@@ -9,7 +9,7 @@ local game = nil
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local util = dofile(base.."/util.lua")()
 
-local Inputs = config.InputSize+2
+local Inputs = config.InputSize+1
 local Outputs = #config.ButtonNames
 
 local guiWidth = 0 

@@ -525,14 +525,6 @@ function _M.getInputs()
 		end
 	end
 
-    -- XXX Will this work? Stay tuned
-    if _M.getClimbing() then
-        table.insert(inputs, 1)
-    else
-        table.insert(inputs, 0)
-    end
-    table.insert(inputDeltaDistance, 99)
-	
 	return inputs, inputDeltaDistance
 end
 
