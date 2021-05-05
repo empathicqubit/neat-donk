@@ -22,7 +22,7 @@ local speciesId = -1
 local generationIndex = nil
 
 local inputPipeName = os.getenv("RUNNER_INPUT_PIPE")
-local outputFilePath = os.getenv("RUNNER_OUTPUT_FILE")
+local outputPipeName = os.getenv("RUNNER_OUTPUT_PIPE")
 
 print('Opening input pipe '..inputPipeName)
 local inputPipe = util.openReadPipe(inputPipeName)
@@ -31,16 +31,13 @@ if inputPipe == nil then
 end
 print('Opened input pipe '..inputPipeName)
 
-print('Opening output file '..outputFilePath)
-local outputFile = nil
-while outputFile == nil do
-    outputFile = io.open(outputFilePath, 'w')
-end
-print('Opened output file '..outputFilePath)
+print('Opening output file '..outputPipeName)
+local outputPipe = util.openReadPipeWriter(outputPipeName)
+print('Opened output file '..outputPipeName)
 
 local function writeResponse(object)
-    outputFile:write(serpent.dump(object).."\n")
-    outputFile:flush()
+    outputPipe:write(serpent.dump(object).."\n")
+    outputPipe:flush()
 end
 
 local runner = Runner(Promise)

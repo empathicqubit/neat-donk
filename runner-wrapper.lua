@@ -7,21 +7,6 @@ local Promise = nil
 local util = nil
 local config = dofile(base.."/config.lua")
 local serpent = dofile(base.."/serpent.lua")
-local temps = {
-    os.getenv("TMPDIR"),
-    os.getenv("TEMP"),
-    os.getenv("TEMPDIR"),
-    os.getenv("TMP"),
-}
-
-local tempDir = "/tmp"
-for i=1,#temps,1 do
-    local temp = temps[i]
-    if temp ~= nil and temp ~= "" then
-        tempDir = temps[i]
-        break
-    end
-end
 
 local pipePrefix = "donk_runner_"..
     string.hex(math.floor(random.integer(0, 0xffffffff)))..
@@ -77,23 +62,18 @@ local function launchChildren(_M, count)
             input = nil,
         }
 
-        local outputFileName = outputPrefix..i
+        local outputPipeName = outputPrefix..i
         local inputPipeName = inputPrefix..i
-        local inputFileName = inputPrefix..i
-        if util.isWin then
-            outputFileName = '\\\\.\\pipe\\'..outputFileName
-            inputFileName = '\\\\.\\pipe\\'..inputPipeName
-        end
 
         local settingsDir = nil
         if util.isWin then
-            settingsDir = tempDir.."/donk_runner_settings_"..i
+            settingsDir = util.getTempDir().."/donk_runner_settings_"..i
             util.mkdir(settingsDir)
         end
 
         local envs = {
             RUNNER_INPUT_PIPE = inputPipeName,
-            RUNNER_OUTPUT_FILE = outputFileName,
+            RUNNER_OUTPUT_PIPE = outputPipeName,
             APPDATA = settingsDir,
         }
 
@@ -104,7 +84,7 @@ local function launchChildren(_M, count)
         local promise = util.promiseWrap(function()
             newOne.output:read("*l")
             while newOne.input == nil do
-                newOne.input = io.open(inputFileName, 'w')
+                newOne.input = util.openReadPipeWriter(inputPipeName)
             end
         end)
         table.insert(promises, promise)

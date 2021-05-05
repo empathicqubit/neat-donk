@@ -14,6 +14,26 @@ function _M.promiseWrap(next)
     return promise:next(next)
 end
 
+function _M.getTempDir()
+    local temps = {
+        os.getenv("TMPDIR"),
+        os.getenv("TEMP"),
+        os.getenv("TEMPDIR"),
+        os.getenv("TMP"),
+    }
+
+    local tempDir = "/tmp"
+    for i=1,#temps,1 do
+        local temp = temps[i]
+        if temp ~= nil and temp ~= "" then
+            tempDir = temps[i]
+            break
+        end
+    end
+
+    return tempDir
+end
+
 --- Echo a command, run it, and return the file handle
 --- @param cmd string The command to execute
 --- @param workdir string The working directory
@@ -60,8 +80,21 @@ function _M.openReadPipe(name)
         print(cmd)
         return io.popen(cmd, 'r')
     else
-        error('Not implemented')
+        return io.popen("socat 'UNIX-LISTEN:".._M.getTempDir().."/"..name.."' -", 'r')
     end
+end
+
+function _M.openReadPipeWriter(name)
+    local writer = nil
+    while writer == nil do
+        if _M.isWin then
+            writer = io.open('\\\\.\\pipe\\'..name, 'w')
+        else
+            writer = io.popen("socat 'UNIX-CONNECT:".._M.getTempDir().."/"..name.."' -", 'w')
+        end
+    end
+
+    return writer
 end
 
 --- Download a url

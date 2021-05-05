@@ -7,7 +7,7 @@ See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
 ## Requirements
 
 * lsnes with **Lua 5.2** (do not try to build with 5.3, it does not work!)
-* inotifywait for Linux, or a fairly recent version of Windows that has PowerShell
+* socat for Linux, or a fairly recent version of Windows that has PowerShell
 * A Donkey Kong Country 2 1.1 US ROM (matching hash b79c2bb86f6fc76e1fc61c62fc16d51c664c381e58bc2933be643bbc4d8b610c)
 
 ### Windows
