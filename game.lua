@@ -486,13 +486,30 @@ function _M.getInputs()
 			
 			local tile = _M.getTile(dx, dy)
 			if tile == 1 then
-                if _M.getTile(dx, dy-1) == 1 then
+                if inputs[#inputs-config.BoxRadius*2-1] == -1 then
                     inputs[#inputs] = -1
                 else
-                    inputs[#inputs] = 1
+                    local neighbors = 0
+                    for ddy=-1,1,1 do
+                        for ddx=-1,1,1 do
+                            if (ddy == 0 and ddx == 0) or (ddx == 0 and ddy == 1) then
+                                goto continue
+                            end
+
+                            if _M.getTile(dx+ddx, dy+ddy) == 0 then
+                                neighbors = neighbors + 1
+                            end
+
+                            ::continue::
+                        end
+                    end
+
+                    if neighbors >= 3 then 
+                        inputs[#inputs] = 1
+                    else
+                        inputs[#inputs] = -1
+                    end
                 end
-            elseif tile == 0 and _M.getTile(dx + 1, dy) == 1 and _M.getTile(dx + 1, dy - 1) == 1 then
-                inputs[#inputs] = -1
 			end
 			
 			for i = 1,#sprites do
@@ -501,6 +518,9 @@ function _M.getInputs()
 				local disty = math.abs(sprite.y - (_M.partyY+dy*mem.size.tile))
                 local dist = math.sqrt((distx * distx) + (disty * disty))
 				if dist <= mem.size.tile * 1.25 then
+                    if sprite.good == 0 then
+                        goto continue
+                    end
 					inputs[#inputs] = sprite.good
 					
 					if dist > mem.size.tile then

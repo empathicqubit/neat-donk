@@ -80,6 +80,7 @@ _M.BadSprites = {
     klampon = 0x01f0,
     flotsam = 0x01f8,
     klinger = 0x0200,
+    klingerSkidCloud = 0x0014,
     puftup = 0x0208,
     zingerAllColors = 0x0218,
     miniNecky = 0x0214,
