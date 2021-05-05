@@ -564,7 +564,7 @@ local function mainLoop(_M, genome)
 
         if _M.currentFrame%5 == 0 then
             local inputs, inputDeltas = game.getInputs()
-            if game.bonusScreenDisplayed(inputs) and _M.timeout < timeoutConst then
+            if game.bonusScreenDisplayed(inputs) and _M.timeout > -1000 and _M.timeout < timeoutConst then
                 _M.timeout = timeoutConst
             end
 
