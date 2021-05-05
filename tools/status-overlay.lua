@@ -153,7 +153,7 @@ local function get_sprite(base_addr)
         velocityY = memory.readsword(base_addr + offsets.velocityY),
         velomaxx = memory.readsword(base_addr + 0x26),
         velomaxy = memory.readsword(base_addr + 0x2a),
-        motion = memory.readword(base_addr + 0x2e),
+        motion = memory.readword(base_addr + offsets.motion),
         attr = memory.readword(base_addr + 0x30),
         animnum = memory.readword(base_addr + 0x36),
         remainingframe = memory.readword(base_addr + 0x38),

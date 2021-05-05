@@ -9,7 +9,7 @@ local game = nil
 local mathFunctions = dofile(base.."/mathFunctions.lua")
 local util = dofile(base.."/util.lua")()
 
-local Inputs = config.InputSize+1
+local Inputs = config.InputSize+2
 local Outputs = #config.ButtonNames
 
 local guiWidth = 0 
@@ -471,7 +471,7 @@ local function initializeRun(_M)
     exec('enable-sound '..enableSound)
     gui.subframe_update(false)
 
-    return rewind():next(function(preferredExit)
+    return rewind():next(function()
         if config.StartPowerup ~= nil then
             game.writePowerup(config.StartPowerup)
         end
@@ -500,7 +500,7 @@ local function initializeRun(_M)
         _M.currentArea = game.getCurrentArea()
         _M.lastArea = _M.currentArea
 
-        for areaId,areaInfo in pairs(_M.areaInfo) do
+        for _,areaInfo in pairs(_M.areaInfo) do
             areaInfo.shortest = areaInfo.startDistance
         end
 
@@ -512,7 +512,7 @@ end
 
 local function getDistanceTraversed(areaInfo)
     local distanceTraversed = 0
-    for areaId,areaInfo in pairs(areaInfo) do
+    for _,areaInfo in pairs(areaInfo) do
         distanceTraversed = areaInfo.startDistance - areaInfo.shortest
     end
     return distanceTraversed

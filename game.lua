@@ -396,6 +396,7 @@ function _M.getSprite(idx)
         style = util.regionToWord(spriteData, offsets.style),
         velocityX = util.regionToWord(spriteData, offsets.velocityX),
         velocityY = util.regionToWord(spriteData, offsets.velocityY),
+        motion = util.regionToWord(spriteData, offsets.motion),
         x = x,
         y = y,
         good = spritelist.Sprites[control]
@@ -523,8 +524,24 @@ function _M.getInputs()
 			end
 		end
 	end
+
+    -- XXX Will this work? Stay tuned
+    if _M.getClimbing() then
+        table.insert(inputs, 1)
+    else
+        table.insert(inputs, 0)
+    end
+    table.insert(inputDeltaDistance, 99)
 	
 	return inputs, inputDeltaDistance
+end
+
+function _M.getClimbing()
+    local sprite = _M.getSprite(_M.leader)
+    if sprite == nil then
+        return false
+    end
+    return sprite.motion >= 0x35 and sprite.motion <= 0x39
 end
 
 function _M.clearJoypad()

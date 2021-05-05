@@ -48,6 +48,7 @@ local _M = {
             style = 0x12,
             velocityX = 0x20,
             velocityY = 0x24,
+            motion = 0x2e,
         }
     }
 }

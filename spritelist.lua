@@ -105,13 +105,13 @@ end
 
 function _M.InitSpriteList()
     for k,v in pairs(_M.GoodSprites) do
-        _M.extSprites[v] = 1
+        _M.Sprites[v] = 1
     end
     for k,v in pairs(_M.BadSprites) do
-        _M.extSprites[v] = -1
+        _M.Sprites[v] = -1
     end
     for k,v in pairs(_M.NeutralSprites) do
-        _M.extSprites[v] = 0
+        _M.Sprites[v] = 0
     end
 end
 
