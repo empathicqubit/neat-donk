@@ -48,6 +48,11 @@ pool.onRenderForm(function(form)
     end
 end)
 
+local DONK_LOAD_POOL = os.getenv('DONK_LOAD_POOL')
+if DONK_LOAD_POOL ~= nil and DONK_LOAD_POOL ~= "" then
+    pool.requestLoad(DONK_LOAD_POOL)
+end
+
 pool.run():next(function()
     print("The pool finished running!!!")
 end):catch(function(error)
