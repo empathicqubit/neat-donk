@@ -98,7 +98,7 @@ local function waitLoop(inputLine)
     return util.promiseWrap(function()
         local ok, inputData = serpent.load(inputLine)
 
-        if not ok or inputData == nil or speciesId == inputData[1].id then
+        if not ok or inputData == nil then
             io.stderr:write("Deserialization error\n")
             io.stderr:write(inputLine.."\n")
             return
