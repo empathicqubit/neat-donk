@@ -277,8 +277,12 @@ local function displayForm(_M)
     
     local areaInfo = _M.areaInfo[_M.currentArea]
     local distanceTraversed = 0
+    local goalX = 0
+    local goalY = 0
     if areaInfo ~= nil then
         distanceTraversed = areaInfo.startDistance - areaInfo.shortest
+        goalX = areaInfo.preferredExit.x
+        goalY = areaInfo.preferredExit.y
     end
 
 	gui.text(5, 30, "Timeout: " .. _M.timeout)
@@ -295,6 +299,7 @@ local function displayForm(_M)
     gui.text(130, 95, "Bumps: " .. _M.bumps)
 	gui.text(230, 65, "Damage: " .. _M.partyHitCounter)
 	gui.text(230, 80, "PowerUp: " .. _M.powerUpCounter)
+	gui.text(230, 95, string.format("Goal Offset: %d, %d", goalX - game.partyX, goalY - game.partyY))
 	gui.text(320, 65, string.format("Current Area: %04x", _M.currentArea))
 	gui.text(320, 80, string.format("Traveled: %d", distanceTraversed))
 
