@@ -566,7 +566,7 @@ local function mainLoop(_M, genome)
         end
 
         local fell = game.fell()
-        if fell then
+        if fell and _M.timeout > 0 then
             _M.timeout = 0
         end
 
