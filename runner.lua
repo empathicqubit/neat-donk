@@ -565,6 +565,11 @@ local function mainLoop(_M, genome)
             timeoutConst = config.NeatConfig.TimeoutConstant
         end
 
+        local fell = game.fell()
+        if fell then
+            _M.timeout = 0
+        end
+
         if _M.currentFrame%5 == 0 then
             local inputs, inputDeltas = game.getInputs()
             if game.bonusScreenDisplayed(inputs) and _M.timeout > -1000 and _M.timeout < timeoutConst then
@@ -621,11 +626,9 @@ local function mainLoop(_M, genome)
             message(_M, string.format("We missed %d frames", frame - lastFrame), 0x00990000)
         end
 
-        local fell = game.fell()
-
         -- Continue if we haven't timed out
         local timeoutBonus = _M.currentFrame / 4
-        if not fell and _M.timeout + timeoutBonus > 0 then
+        if _M.timeout + timeoutBonus > 0 then
             return mainLoop(_M, genome)
         end
         
