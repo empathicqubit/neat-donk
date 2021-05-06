@@ -285,23 +285,21 @@ local function displayForm(_M)
         goalY = areaInfo.preferredExit.y
     end
 
-	gui.text(5, 30, "Timeout: " .. _M.timeout)
-	gui.text(5, 5, "Generation: " .. _M.currentGenerationIndex)
-	gui.text(130, 5, "Species: " .. _M.currentSpecies.id)
-	gui.text(230, 5, "Genome: " .. _M.currentGenomeIndex)
-	gui.text(130, 30, "Max: " .. math.floor(_M.maxFitness))
-	--gui.text(330, 5, "Measured: " .. math.floor(measured/total*100) .. "%")
-	gui.text(5, 65, "Bananas: " .. _M.totalBananas)
-	gui.text(5, 80, "KONG: " .. (game.getKong() - _M.startKong))
-    gui.text(5, 95, "Krem: " .. (game.getKremCoins() - _M.startKrem))
-	gui.text(130, 65, "Coins: " .. (game.getCoins() - _M.startCoins))
-	gui.text(130, 80, "Lives: " .. game.getLives())
-    gui.text(130, 95, "Bumps: " .. _M.bumps)
-	gui.text(230, 65, "Damage: " .. _M.partyHitCounter)
-	gui.text(230, 80, "PowerUp: " .. _M.powerUpCounter)
-	gui.text(230, 95, string.format("Goal Offset: %d, %d", goalX - game.partyX, goalY - game.partyY))
-	gui.text(320, 65, string.format("Current Area: %04x", _M.currentArea))
-	gui.text(320, 80, string.format("Traveled: %d", distanceTraversed))
+	gui.text(5, 5, string.format([[
+Generation: %4d Species: %4d Genome: %4d
+
+Timeout: %4d Max: %6d
+
+Bananas: %4d Coins: %3d Damage: %3d Current area: %04x
+KONG: %7d Lives: %3d Powerup: %2d Traveled: %8d
+Krem: %7d Bumps: %3d Goal Offset: %8d, %7d
+]],
+    _M.currentGenerationIndex, _M.currentSpecies.id, _M.currentGenomeIndex,
+    _M.timeout, math.floor(_M.maxFitness),
+    _M.totalBananas, game.getCoins() - _M.startCoins, _M.partyHitCounter, _M.currentArea,
+    game.getKong() - _M.startKong, game.getLives(), _M.powerUpCounter, distanceTraversed,
+    game.getKremCoins() - _M.startKrem, _M.bumps, goalX - game.partyX, goalY - game.partyY
+))
 
     displayButtons(_M)
     formCtx:set()
