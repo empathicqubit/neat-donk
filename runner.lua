@@ -618,9 +618,11 @@ local function mainLoop(_M, genome)
             message(_M, string.format("We missed %d frames", frame - lastFrame), 0x00990000)
         end
 
+        local fell = game.fell()
+
         -- Continue if we haven't timed out
         local timeoutBonus = _M.currentFrame / 4
-        if _M.timeout + timeoutBonus > 0 then
+        if not fell and _M.timeout + timeoutBonus > 0 then
             return mainLoop(_M, genome)
         end
         
@@ -643,7 +645,12 @@ local function mainLoop(_M, genome)
 
         local distanceTraversed = getDistanceTraversed(_M.areaInfo) - _M.currentFrame / 2
 
-        local fitness = bananaCoinsFitness - bumpPenalty - hitPenalty + powerUpBonus + distanceTraversed + game.getJumpHeight() / 100
+        local fitness = bananaCoinsFitness - bumpPenalty - hitPenalty + powerUpBonus + distanceTraversed
+
+        if fell then
+            fitness = fitness / 10
+            message(_M, "Fall penalty 1/10")
+        end
 
         local lives = game.getLives()
 

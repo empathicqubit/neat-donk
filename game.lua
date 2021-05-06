@@ -372,6 +372,15 @@ function _M.getJumpHeight()
     return sprite.jumpHeight
 end
 
+function _M.fell()
+    local sprite = _M.getSprite(_M.leader)
+    if sprite == nil then
+        return 0
+    end
+
+    return sprite.motion == 0x3b
+end
+
 function _M.getSprite(idx)
     local baseAddr = idx * mem.size.sprite + mem.addr.spriteBase
     local spriteData = memory.readregion(baseAddr, mem.size.sprite)
