@@ -10,3 +10,6 @@ set_timer_timeout(1)
 local game = dofile(base.."/game.lua")(Promise)
 local util = dofile(base.."/util.lua")(Promise)
 local serpent = dofile(base.."/serpent.lua")
+
+game.registerHandlers()
+game.getPositions()

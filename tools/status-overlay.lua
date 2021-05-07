@@ -132,44 +132,43 @@ function on_input (subframe)
     end
 end
 
-local function get_sprite(base_addr)
+local function get_sprite(baseAddr)
+    local spriteData = memory.readregion(baseAddr, mem.size.sprite)
     local offsets = mem.offset.sprite
-    local cameraX = memory.readword(mem.addr.cameraX) - 256
-    local cameraY = memory.readword(mem.addr.cameraY) - 256
-    local x = memory.readword(base_addr + offsets.x)
-    local y = memory.readword(base_addr + offsets.y)
+    local x = util.regionToWord(spriteData, offsets.x)
+    local y = util.regionToWord(spriteData, offsets.y)
     return {
-        base_addr = string.format("%04x", base_addr),
-        screenX = x - 256 - cameraX,
-        screenY = y - 256 - cameraY - mem.size.tile / 3,
-        control = memory.readword(base_addr + offsets.control),
-        draworder = memory.readword(base_addr + 0x02),
+        base_addr = string.format("%04x", baseAddr),
+        screenX = x - game.cameraX,
+        screenY = y - game.cameraY - mem.size.tile / 3,
+        control = util.regionToWord(spriteData, offsets.control),
+        draworder = util.regionToWord(spriteData, 0x02),
         x = x,
         y = y,
-        jumpHeight = memory.readword(base_addr + offsets.jumpHeight),
-        style = memory.readword(base_addr + offsets.style),
-        currentframe = memory.readword(base_addr + 0x18),
-        nextframe = memory.readword(base_addr + 0x1a),
-        state = memory.readword(base_addr + 0x1e),
-        velocityX = memory.readsword(base_addr + offsets.velocityX),
-        velocityY = memory.readsword(base_addr + offsets.velocityY),
-        velomaxx = memory.readsword(base_addr + 0x26),
-        velomaxy = memory.readsword(base_addr + 0x2a),
-        motion = memory.readword(base_addr + offsets.motion),
-        attr = memory.readword(base_addr + 0x30),
-        animnum = memory.readword(base_addr + 0x36),
-        remainingframe = memory.readword(base_addr + 0x38),
-        animcontrol = memory.readword(base_addr + 0x3a),
-        animreadpos = memory.readword(base_addr + 0x3c),
-        animcontrol2 = memory.readword(base_addr + 0x3e),
-        animformat = memory.readword(base_addr + 0x40),
-        damage1 = memory.readword(base_addr + 0x44),
-        damage2 = memory.readword(base_addr + 0x46),
-        damage3 = memory.readword(base_addr + 0x48),
-        damage4 = memory.readword(base_addr + 0x4a),
-        damage5 = memory.readword(base_addr + 0x4c),
-        damage6 = memory.readword(base_addr + 0x4e),
-        spriteparam = memory.readword(base_addr + 0x58),
+        jumpHeight = util.regionToWord(spriteData, offsets.jumpHeight),
+        style = util.regionToWord(spriteData, offsets.style),
+        currentframe = util.regionToWord(spriteData, 0x18),
+        nextframe = util.regionToWord(spriteData, 0x1a),
+        state = util.regionToWord(spriteData, 0x1e),
+        velocityX = util.regionToSWord(spriteData, offsets.velocityX),
+        velocityY = util.regionToSWord(spriteData, offsets.velocityY),
+        velomaxx = util.regionToSWord(spriteData, 0x26),
+        velomaxy = util.regionToSWord(spriteData, 0x2a),
+        motion = util.regionToWord(spriteData, offsets.motion),
+        attr = util.regionToWord(spriteData, 0x30),
+        animnum = util.regionToWord(spriteData, 0x36),
+        remainingframe = util.regionToWord(spriteData, 0x38),
+        animcontrol = util.regionToWord(spriteData, 0x3a),
+        animreadpos = util.regionToWord(spriteData, 0x3c),
+        animcontrol2 = util.regionToWord(spriteData, 0x3e),
+        animformat = util.regionToWord(spriteData, 0x40),
+        damage1 = util.regionToWord(spriteData, 0x44),
+        damage2 = util.regionToWord(spriteData, 0x46),
+        damage3 = util.regionToWord(spriteData, 0x48),
+        damage4 = util.regionToWord(spriteData, 0x4a),
+        damage5 = util.regionToWord(spriteData, 0x4c),
+        damage6 = util.regionToWord(spriteData, 0x4e),
+        spriteparam = util.regionToWord(spriteData, 0x58),
     }
 end
 
@@ -233,6 +232,8 @@ Sprite Details:
         return
     end
 
+    game.getPositions()
+
     local toggles = ""
 
     if pokemon then
@@ -256,17 +257,11 @@ Sprite Details:
         "Up"
     }
 
-    local cameraX = memory.readword(mem.addr.cameraX) - 256
-    local cameraY = memory.readword(mem.addr.cameraY) - 256
     local cameraDir = memory.readbyte(CAMERA_MODE)
 
     local direction = directions[cameraDir+1]
 
-    local vertical = memory.readword(mem.addr.tileCollisionMathPointer) == mem.addr.verticalPointer
-
-    local partyX = memory.readword(mem.addr.partyX)
-    local partyY = memory.readword(mem.addr.partyY)
-    local partyTileOffset = game.tileOffsetCalculation(partyX, partyY, vertical)
+    local partyTileOffset = game.tileOffsetCalculation(game.partyX, game.partyY, game.vertical)
 
     local stats = string.format([[
 %s camera %d,%d
@@ -275,11 +270,11 @@ Tile offset: %04x
 Main area: %04x
 Current area: %04x
 %s
-]], direction, cameraX, cameraY, vertical, partyTileOffset, memory.readword(mem.addr.mainAreaNumber), memory.readword(mem.addr.currentAreaNumber), util.table_to_string(game.getInputs()):gsub("[\\{\\},\n\"]", ""):gsub("-1", "X"):gsub("0", "."):gsub("1", "O"):gsub("(.............)", "%1\n"))
+]], direction, game.cameraX, game.cameraY, game.vertical, partyTileOffset, memory.readword(mem.addr.mainAreaNumber), memory.readword(mem.addr.currentAreaNumber), util.table_to_string(game.getInputs()):gsub("[\\{\\},\n\"]", ""):gsub("-1", "X"):gsub("0", "."):gsub("1", "O"):gsub("(.............)", "%1\n"))
 
     text(guiWidth - 125, guiHeight - 200, stats)
 
-    text((partyX - 256 - cameraX) * 2, (partyY - 256 - cameraY) * 2 + 20, "Party")
+    text((game.partyX - game.cameraX) * 2, (game.partyY - game.cameraY) * 2 + 20, "Party")
 
     local sprites = {}
     for idx = 0,22,1 do
@@ -312,20 +307,20 @@ Current area: %04x
         ::continue::
     end
 
-    if rulers and cameraX >= 0 then
+    if rulers and game.cameraX >= 0 then
         local halfWidth = math.floor(guiWidth / 2)
         local halfHeight = math.floor(guiHeight / 2)
 
-        local cameraTileX = math.floor(cameraX / mem.size.tile)
+        local cameraTileX = math.floor(game.cameraX / mem.size.tile)
         gui.line(0, halfHeight, guiWidth, halfHeight, BG_COLOR)
         for i = cameraTileX, cameraTileX + guiWidth / mem.size.tile / 2,1 do
-            text((i * mem.size.tile - cameraX) * 2, halfHeight, tostring(i), FG_COLOR, BG_COLOR)
+            text((i * mem.size.tile - game.cameraX) * 2, halfHeight, tostring(i), FG_COLOR, BG_COLOR)
         end
 
-        local cameraTileY = math.floor(cameraY / mem.size.tile)
+        local cameraTileY = math.floor(game.cameraY / mem.size.tile)
         gui.line(halfWidth, 0, halfWidth, guiHeight, BG_COLOR)
         for i = cameraTileY, cameraTileY + guiHeight / mem.size.tile / 2,1 do
-            text(halfWidth, (i * mem.size.tile - cameraY) * 2, tostring(i), FG_COLOR, BG_COLOR)
+            text(halfWidth, (i * mem.size.tile - game.cameraY) * 2, tostring(i), FG_COLOR, BG_COLOR)
         end
     end
 
@@ -333,10 +328,10 @@ Current area: %04x
 
     for x = -TILE_RADIUS, TILE_RADIUS, 1 do
         for y = -TILE_RADIUS, TILE_RADIUS, 1 do
-            local tileX = math.floor((partyX + x * mem.size.tile) / mem.size.tile) * mem.size.tile
-            local tileY = math.floor((partyY + y * mem.size.tile) / mem.size.tile) * mem.size.tile
+            local tileX = math.floor((game.partyX + x * mem.size.tile) / mem.size.tile) * mem.size.tile
+            local tileY = math.floor((game.partyY + y * mem.size.tile) / mem.size.tile) * mem.size.tile
 
-            local offset = game.tileOffsetCalculation(tileX, tileY, vertical)
+            local offset = game.tileOffsetCalculation(tileX, tileY, game.vertical)
 
             local tile = memory.readword(tilePtr + offset)
 
@@ -344,8 +339,8 @@ Current area: %04x
                 goto continue
             end
 
-            local screenX = (tileX - 256 - cameraX) * 2 
-            local screenY = (tileY - 256 - cameraY) * 2
+            local screenX = (tileX - 256 - game.cameraX) * 2 
+            local screenY = (tileY - 256 - game.cameraY) * 2
             if screenX < 0 or screenX > guiWidth or
                 screenY < 0 or screenY > guiHeight then
                 --goto continue
@@ -357,7 +352,7 @@ Current area: %04x
         end
     end
 
-    if cameraX >= 0 then
+    if game.cameraX >= 0 then
         local oam = memory2.OAM:readregion(0x00, 0x220)
 
         for idx=0,0x200/4-1,1 do

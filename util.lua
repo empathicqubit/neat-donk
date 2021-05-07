@@ -275,6 +275,18 @@ function _M.regionToWord(region, offset)
     return bit.compose(region[offset], region[offset + 1])
 end
 
+function _M.regionToSWord(region, offset)
+    local unsigned = _M.regionToWord(region, offset)
+    local base = bit.band(unsigned, 0x7fff)
+    local sign = bit.lrshift(unsigned, 15)
+    -- There is a more mathematical way to do this but whatever
+    if sign == 1 then
+        return base-0x8000
+    else
+        return base
+    end
+end
+
 return function(promise)
     Promise = promise
     return _M

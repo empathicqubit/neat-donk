@@ -196,6 +196,66 @@ function _M.findPreferredExit()
     end)
 end
 
+--- Starting from a specified point in the area, weave back and forth until we reach
+--- fall to the bottom. Return all points where we hit the floor on the way down.
+---@param startX integer x coordinate of the starting point
+---@param startY integer y coordinate of the starting point
+---@return table table A list of all the points that we collided with a platform
+function _M.rollFromTarget(startX, startY)
+    local areaWidth = _M.getAreaWidth()
+    local areaHeight = _M.getAreaHeight()
+    local increment = mem.size.tile
+    local direction = increment
+    local terminus = areaWidth
+    -- If we're on the right half, move left
+    -- If we're on the left half, move right
+    if startX > areaWidth / 2 then
+        direction = -direction
+        terminus = 0
+    end
+
+    local collisions = {}
+    local currentY = startY
+    local currentX = startX
+    while currentY < areaHeight - increment do
+        -- Drop down until we collide with the floor
+        while currentY < areaHeight - increment and _M.getAbsoluteTile(currentX, currentY) ~= 1 do
+            currentY = currentY + increment
+            print(string.format("currentx: %d, currenty: %d, areaheight: %d, direction: %d, ", currentX, currentY, areaHeight, direction))
+        end
+
+        -- Break if we've hit the bottom
+        if currentY > areaHeight - increment then
+            break
+        end
+        -- Track the collision
+        table.insert(collisions, {
+            x = currentX,
+            y = currentY,
+        })
+        -- Move in the direction until we reach a gap or the edge of the area
+        while currentY < areaHeight - increment do
+            currentX = currentX + direction
+            print(string.format("currentx: %d, currenty: %d, areaheight: %d, direction: %d, ", currentX, currentY, areaHeight, direction))
+            -- Switch directions if we're out of bounds
+            if direction < 0 and currentX < terminus + increment or direction > 0 and currentX > terminus - increment then
+                direction = -direction
+            elseif _M.getAbsoluteTile(currentX, currentY) ~= 1 then
+                -- Check to make sure there isn't a floor immediately underneath.
+                -- If there is we're probably on an incline.
+                if _M.getAbsoluteTile(currentX, currentY + increment) == 1 then
+                    currentY = currentY + increment
+                else
+                    break
+                end
+            end
+        end
+    end
+
+    print(util.table_to_string(collisions))
+    return collisions
+end
+
 function _M.getGoalHit()
     local sprites = _M.getSprites()
     for i=1,#sprites,1 do
@@ -345,9 +405,9 @@ function _M.tileIsSolid(x, y, tileVal, tileOffset)
     return true
 end
 
-function _M.getTile(dx, dy)
-    local tileX = math.floor((_M.partyX + dx * mem.size.tile) / mem.size.tile) * mem.size.tile
-    local tileY = math.floor((_M.partyY + dy * mem.size.tile) / mem.size.tile) * mem.size.tile
+function _M.getAbsoluteTile(x, y)
+    local tileX = math.floor(x / mem.size.tile) * mem.size.tile
+    local tileY = math.floor(y / mem.size.tile) * mem.size.tile
 
     local offset = _M.tileOffsetCalculation(tileX, tileY, _M.vertical)
 
@@ -358,6 +418,10 @@ function _M.getTile(dx, dy)
     end
 
     return 1
+end
+
+function _M.getTile(dx, dy)
+    return _M.getAbsoluteTile(_M.partyX + dx * mem.size.tile, _M.partyY + dy * mem.size.tile)
 end
 
 function _M.getCurrentArea()
@@ -403,8 +467,8 @@ function _M.getSprite(idx)
         -- 0x4000 0: Right facing 1: Flipped
         -- 0x1000 0: Alive 1: Dying
         style = util.regionToWord(spriteData, offsets.style),
-        velocityX = util.regionToWord(spriteData, offsets.velocityX),
-        velocityY = util.regionToWord(spriteData, offsets.velocityY),
+        velocityX = util.regionToSWord(spriteData, offsets.velocityX),
+        velocityY = util.regionToSWord(spriteData, offsets.velocityY),
         motion = util.regionToWord(spriteData, offsets.motion),
         x = x,
         y = y,
