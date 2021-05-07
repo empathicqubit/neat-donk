@@ -1,7 +1,6 @@
 local gui, input, movie, settings, exec, callback, set_timer_timeout = gui, input, movie, settings, exec, callback, set_timer_timeout
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
-
 local Promise = nil
 
 local config = dofile(base.."/config.lua")
@@ -451,9 +450,9 @@ local function generateNetwork(genome)
 	genome.network = network
 end
 
-local rew = movie.to_rewind(config.NeatConfig.Filename)
+local beginRewindState = nil
 local function rewind()
-    return game.rewind(rew):next(function()
+    return game.rewind(beginRewindState):next(function()
         frame = 0
         lastFrame = 0
     end)
@@ -846,6 +845,9 @@ local function saveLoadInput(_M)
 end
 
 local function run(_M, species, generationIdx, genomeCallback)
+    if beginRewindState == nil then
+        beginRewindState = movie.to_rewind(config.NeatConfig.Filename)
+    end
     game.registerHandlers()
 
     _M.currentGenerationIndex = generationIdx

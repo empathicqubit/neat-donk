@@ -9,9 +9,7 @@ local util = dofile(base.."/util.lua")(Promise)
 local serpent = dofile(base.."/serpent.lua")
 local libDeflate = dofile(base.."/LibDeflate.lua")
 
-local hasThreads = 
-	--not util.isWin and
-		config.NeatConfig.Threads > 1
+local hasThreads = config.NeatConfig.Threads > 1
 
 -- Only the parent should manage ticks!
 callback.register('timer', function()
@@ -20,18 +18,14 @@ callback.register('timer', function()
 end)
 set_timer_timeout(1)
 
+local warn = '========== The ROM file to use comes from config.lua.'
+io.stderr:write(warn)
+print(warn)
+
 local Runner = nil
 if hasThreads then
-	local warn = '========== When using threads, the ROM file to use comes from config.lua. Also, you do not need to start any ROM in the parent process.'
-	io.stderr:write(warn)
-	print(warn)
-
     Runner = dofile(base.."/runner-wrapper.lua")
 else
-	local warn = '========== The ROM must already be running when you only have one thread.'
-	io.stderr:write(warn)
-	print(warn)
-
     Runner = dofile(base.."/runner.lua")
 end
 
@@ -821,6 +815,10 @@ function _M.run(reset)
 	return promise:next(function()
 		return writeFile(config.PoolDir.."temp.pool")
 	end):next(function ()
+		if not hasThreads then
+			return util.loadAndStart(config.ROM)
+		end
+	end):next(function()
 		return mainLoop()
 	end)
 end

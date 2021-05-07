@@ -1,4 +1,4 @@
-local utime, bit = utime, bit
+local utime, bit, callback, exec = utime, bit, callback, exec
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
@@ -8,10 +8,59 @@ local _M = {}
 
 _M.isWin = package.config:sub(1, 1) == '\\'
 
+--- Converts a function into a promise.
+--- Useful for decoupling code from the original event it was fired in.
+---@param next function The function to resolve on the next tick
+---@return Promise Promise A promise that returns the value of the next function
 function _M.promiseWrap(next)
     local promise = Promise.new()
     promise:resolve()
     return promise:next(next)
+end
+
+--- Wait for a specified amount of time. Note that this is dependent on the
+--- timer timeout getting set elsewhere in the code, probably in the Promise
+--- handler setup
+---@param delayUsec number Number of microseconds to wait
+---@return Promise Promise A promise that resolves when the time has elapsed
+function _M.delay(delayUsec)
+    return Promise.new(function(res, rej)
+        local sec, usec = utime()
+        local start = sec * 1000000 + usec
+        local finish = start
+        local unTimer = nil
+        local function onTimer()
+            sec, usec = utime()
+            finish = sec * 1000000 + usec
+            if finish - start >= delayUsec then
+                callback.unregister('timer', unTimer)
+                res()
+            end
+        end
+        unTimer = callback.register('timer', onTimer)
+    end)
+end
+
+function _M.loadAndStart(romFile)
+    return Promise.new(function(res, rej)
+        local unPaint = nil
+        local paint = 0
+        local function onPaint()
+            paint = paint + 1
+
+            _M.promiseWrap(function()
+                if paint == 1 then
+                    exec('pause-emulator')
+                elseif paint > 1 then
+                    callback.unregister('paint', unPaint)
+                    res()
+                end
+            end)
+        end
+        unPaint = callback.register('paint', onPaint)
+
+        exec('load-rom '..romFile)
+    end)
 end
 
 function _M.getTempDir()
