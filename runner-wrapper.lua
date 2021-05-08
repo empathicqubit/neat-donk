@@ -174,8 +174,10 @@ return function(promise)
 
             message(_M, 'Waiting for child processes to finish')
 
-            local function readLoop(outputPipe, line)
+            local function readLoop(outputPipe)
                 return util.promiseWrap(function()
+                    return outputPipe:read("*l")
+                end):next(function(line)
                     if line == nil or line == "" then
                         util.closeCmd(outputPipe)
                     end
@@ -216,19 +218,14 @@ return function(promise)
                         return
                     end
 
-                    local line = outputPipe:read("*l")
-                    return readLoop(outputPipe, line)
+                    return readLoop(outputPipe)
                 end)
             end
 
             local waiters = {}
             for i=1,#speciesSlice,1 do
                 local outputPipe = _M.poppets[i].output
-                local waiter = util.promiseWrap(function()
-                    local line = outputPipe:read("*l")
-
-                    return readLoop(outputPipe, line)
-                end)
+                local waiter = readLoop(outputPipe)
                 table.insert(waiters, waiter)
             end
 
