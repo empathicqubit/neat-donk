@@ -222,8 +222,8 @@ return function(promise)
 
             local waiters = {}
             for i=1,#speciesSlice,1 do
+                local outputPipe = _M.poppets[i].output
                 local waiter = util.promiseWrap(function()
-                    local outputPipe = _M.poppets[i].output
                     local line = outputPipe:read("*l")
 
                     print("Started receiving output from child process "..i)

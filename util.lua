@@ -12,9 +12,9 @@ _M.isWin = package.config:sub(1, 1) == '\\'
 --- Useful for decoupling code from the original event it was fired in.
 ---@param next function The function to resolve on the next tick
 ---@return Promise Promise A promise that returns the value of the next function
-function _M.promiseWrap(next)
+function _M.promiseWrap(next, value)
     local promise = Promise.new()
-    promise:resolve()
+    promise:resolve(value)
     return promise:next(next)
 end
 
