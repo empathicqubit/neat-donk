@@ -571,12 +571,7 @@ local function mainLoop(_M, genome)
         end
         
         game.getPositions()
-        local timeoutConst = 0
-        if game.vertical then
-            timeoutConst = config.NeatConfig.TimeoutConstant * 10
-        else
-            timeoutConst = config.NeatConfig.TimeoutConstant
-        end
+        local timeoutConst = config.NeatConfig.TimeoutConstant
 
         local fell = game.fell()
         if (fell or game.diedFromHit()) and _M.timeout > 0 then
