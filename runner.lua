@@ -268,7 +268,7 @@ end
 local formCtx = nil
 local form = nil
 local function displayForm(_M)
-    if #_M.onRenderFormHandler == 0 then
+    if config.NeatConfig.ShowInterface == false or #_M.onRenderFormHandler == 0 then
         return
     end
 
