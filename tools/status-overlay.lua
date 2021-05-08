@@ -1,16 +1,21 @@
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1").."/.."
 
-local set_timer_timeout, memory, memory2, gui, input, bit = set_timer_timeout, memory, memory2, gui, input, bit
+local set_timer_timeout, memory, memory2, gui, input, bit, callback = set_timer_timeout, memory, memory2, gui, input, bit, callback
 
 local warn = '========== The ROM must be running before running this script'
 io.stderr:write(warn)
 print(warn)
 
-local util = dofile(base.."/util.lua")()
+local Promise = dofile(base.."/promise.lua")
+callback.register('timer', function()
+    Promise.update()
+    set_timer_timeout(1)
+end)
+set_timer_timeout(1)
+local util = dofile(base.."/util.lua")(Promise)
 local mem = dofile(base.."/mem.lua")
 local spritelist = dofile(base.."/spritelist.lua")
-local game = dofile(base.."/game.lua")()
-local config = dofile(base.."/config.lua")
+local game = dofile(base.."/game.lua")(Promise)
 
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
@@ -203,6 +208,7 @@ local function sprite_details(idx)
     text(0, 0, "Sprite "..idx..(locked and " (Locked)" or "")..":\n\n"..util.table_to_string(sprite))
 end
 
+local waypoints = {}
 local overlayCtx = nil
 local overlay = nil
 local function renderOverlay(guiWidth, guiHeight)
@@ -306,6 +312,31 @@ Current area: %04x
         end
         ::continue::
     end
+
+    for i=1,#waypoints,1 do
+        local screenX = (waypoints[i].x - game.cameraX) * 2
+        local screenY = (waypoints[i].y - game.cameraY) * 2
+
+        if screenX > guiWidth - mem.size.tile * 2 then
+            screenX = guiWidth - mem.size.tile * 2
+        end
+
+        if screenY > guiHeight then
+            screenY = guiHeight - 20
+        end
+
+        if screenX < 0 then
+            screenX = 0
+        end
+
+        if screenY < 0 then
+            screenY = 0
+        end
+
+        text(screenX, screenY, "WAYPOINT "..i)
+    end
+
+    text(guiWidth / 2, guiHeight - 20, "WAYPOINTS: "..#waypoints)
 
     if rulers and game.cameraX >= 0 then
         local halfWidth = math.floor(guiWidth / 2)
@@ -417,10 +448,6 @@ function on_paint (not_synth)
     end
 end
 
-function on_timer()
-    set_timer_timeout(100 * 1000)
-end
-
 input.keyhook("1", true)
 input.keyhook("2", true)
 input.keyhook("3", true)
@@ -432,7 +459,11 @@ input.keyhook("8", true)
 input.keyhook("9", true)
 input.keyhook("0", true)
 
-set_timer_timeout(100 * 1000)
+game.findPreferredExit():next(function(preferredExit)
+    return game.getWaypoints(preferredExit.x, preferredExit.y)
+end):next(function(w)
+    waypoints = w
+end)
 
 -- fe0a58 crate: near bunch and klomp on barrels
 -- fe0a58: Crate X position

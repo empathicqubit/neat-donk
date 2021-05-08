@@ -13,3 +13,7 @@ local serpent = dofile(base.."/serpent.lua")
 
 game.registerHandlers()
 game.getPositions()
+
+game.findPreferredExit():next(function(preferredExit)
+    game.getWaypoints(preferredExit.x, preferredExit.y)
+end)

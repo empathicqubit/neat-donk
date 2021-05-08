@@ -254,6 +254,17 @@ local function displayButtons(_M)
     gui.renderctx.setnull()
 end
 
+local function getDistanceTraversed(areaInfos)
+    local distanceTraversed = 0
+    for _,areaInfo in pairs(areaInfos) do
+        for i=1,#areaInfo.waypoints,1 do
+            local waypoint = areaInfo.waypoints[i]
+            distanceTraversed = distanceTraversed + (waypoint.startDistance - waypoint.shortest)
+        end
+    end
+    return distanceTraversed
+end
+
 local formCtx = nil
 local form = nil
 local function displayForm(_M)
@@ -274,12 +285,11 @@ local function displayForm(_M)
 	gui.rectangle(0, 0, 500, guiHeight, 1, 0x00ffffff, 0xbb000000)
 	--gui.circle(game.screenX-84, game.screenY-84, 192 / 2, 1, 0x50000000) 
     
-    local areaInfo = _M.areaInfo[_M.currentArea]
-    local distanceTraversed = 0
+    local distanceTraversed = getDistanceTraversed(_M.areaInfo)
     local goalX = 0
     local goalY = 0
+    local areaInfo = _M.areaInfo[_M.currentArea]
     if areaInfo ~= nil then
-        distanceTraversed = areaInfo.startDistance - areaInfo.shortest
         goalX = areaInfo.preferredExit.x
         goalY = areaInfo.preferredExit.y
     end
@@ -499,7 +509,10 @@ local function initializeRun(_M)
         _M.lastArea = _M.currentArea
 
         for _,areaInfo in pairs(_M.areaInfo) do
-            areaInfo.shortest = areaInfo.startDistance
+            for i=1,#areaInfo.waypoints,1 do
+                local waypoint = areaInfo.waypoints[i]
+                waypoint.shortest = waypoint.startDistance
+            end
         end
 
         local genome = _M.currentSpecies.genomes[_M.currentGenomeIndex]
@@ -508,14 +521,6 @@ local function initializeRun(_M)
         local inputs, inputDeltas = game.getInputs()
         evaluateCurrent(_M, inputs, inputDeltas)
     end)
-end
-
-local function getDistanceTraversed(areaInfo)
-    local distanceTraversed = 0
-    for _,areaInfo in pairs(areaInfo) do
-        distanceTraversed = areaInfo.startDistance - areaInfo.shortest
-    end
-    return distanceTraversed
 end
 
 local function mainLoop(_M, genome)
@@ -532,12 +537,21 @@ local function mainLoop(_M, genome)
         elseif _M.currentArea == _M.lastArea and _M.areaInfo[_M.currentArea] == nil then
             message(_M, 'Searching for the main exit in this area')
             return game.findPreferredExit():next(function(preferredExit)
-                local startDistance = math.floor(math.sqrt((preferredExit.y - game.partyY) ^ 2 + (preferredExit.x - game.partyX) ^ 2))
-                _M.areaInfo[_M.currentArea] = {
-                    startDistance = startDistance,
+                local areaInfo = {
                     preferredExit = preferredExit,
-                    shortest = startDistance,
+                    waypoints = game.getWaypoints(preferredExit.x, preferredExit.y),
                 }
+                -- XXX Insert means add a new one, not overwrite?
+                table.insert(areaInfo.waypoints, 1, preferredExit)
+
+                for i=1,#areaInfo.waypoints,1 do
+                    local waypoint = areaInfo.waypoints[i]
+                    local startDistance = math.floor(math.sqrt((waypoint.y - game.partyY) ^ 2 + (waypoint.x - game.partyX) ^ 2))
+                    waypoint.startDistance = startDistance
+                    waypoint.shortest = startDistance
+                end
+
+                _M.areaInfo[_M.currentArea] = areaInfo
             end)
         end
     end):next(function()
@@ -565,7 +579,7 @@ local function mainLoop(_M, genome)
         end
 
         local fell = game.fell()
-        if fell and _M.timeout > 0 then
+        if (fell or game.diedFromHit()) and _M.timeout > 0 then
             _M.timeout = 0
         end
 
@@ -580,11 +594,14 @@ local function mainLoop(_M, genome)
 
         local areaInfo = _M.areaInfo[_M.currentArea]
         if areaInfo ~= nil and game.partyY ~= 0 and game.partyX ~= 0 then
-            local exitDist = math.floor(math.sqrt((areaInfo.preferredExit.y - game.partyY) ^ 2 + (areaInfo.preferredExit.x - game.partyX) ^ 2))
-            if exitDist < areaInfo.shortest then
-                areaInfo.shortest = exitDist
-                if _M.timeout < timeoutConst then
-                    _M.timeout = timeoutConst
+            for i=1,#areaInfo.waypoints,1 do
+                local waypoint = areaInfo.waypoints[i]
+                local dist = math.floor(math.sqrt((waypoint.y - game.partyY) ^ 2 + (waypoint.x - game.partyX) ^ 2))
+                if dist < waypoint.shortest then
+                    waypoint.shortest = dist
+                    if _M.timeout < timeoutConst then
+                        _M.timeout = timeoutConst
+                    end
                 end
             end
         end

@@ -201,7 +201,7 @@ end
 ---@param startX integer x coordinate of the starting point
 ---@param startY integer y coordinate of the starting point
 ---@return table table A list of all the points that we collided with a platform
-function _M.rollFromTarget(startX, startY)
+function _M.getWaypoints(startX, startY)
     local areaWidth = _M.getAreaWidth()
     local areaHeight = _M.getAreaHeight()
     local increment = mem.size.tile
@@ -211,35 +211,45 @@ function _M.rollFromTarget(startX, startY)
     -- If we're on the left half, move right
     if startX > areaWidth / 2 then
         direction = -direction
-        terminus = 0
+        terminus = 0x100
     end
 
     local collisions = {}
     local currentY = startY
     local currentX = startX
+    local switches = 0
     while currentY < areaHeight - increment do
+        switches = 0
         -- Drop down until we collide with the floor
         while currentY < areaHeight - increment and _M.getAbsoluteTile(currentX, currentY) ~= 1 do
             currentY = currentY + increment
-            print(string.format("currentx: %d, currenty: %d, areaheight: %d, direction: %d, ", currentX, currentY, areaHeight, direction))
-        end
-
-        -- Break if we've hit the bottom
-        if currentY > areaHeight - increment then
-            break
         end
         -- Track the collision
         table.insert(collisions, {
             x = currentX,
             y = currentY,
         })
+        -- Break if we've hit the bottom
+        if currentY > areaHeight - increment then
+            break
+        end
         -- Move in the direction until we reach a gap or the edge of the area
         while currentY < areaHeight - increment do
             currentX = currentX + direction
-            print(string.format("currentx: %d, currenty: %d, areaheight: %d, direction: %d, ", currentX, currentY, areaHeight, direction))
             -- Switch directions if we're out of bounds
             if direction < 0 and currentX < terminus + increment or direction > 0 and currentX > terminus - increment then
-                direction = -direction
+                switches = switches + 1
+                if switches > 2 then
+                    currentY = currentY + increment
+                    break
+                end
+                if terminus == 0x100 then
+                    terminus = areaWidth
+                    direction = increment
+                else
+                    terminus = 0x100
+                    direction = -increment
+                end
             elseif _M.getAbsoluteTile(currentX, currentY) ~= 1 then
                 -- Check to make sure there isn't a floor immediately underneath.
                 -- If there is we're probably on an incline.
@@ -252,7 +262,6 @@ function _M.rollFromTarget(startX, startY)
         end
     end
 
-    print(util.table_to_string(collisions))
     return collisions
 end
 
@@ -434,6 +443,15 @@ function _M.getJumpHeight()
         return 0
     end
     return sprite.jumpHeight
+end
+
+function _M.diedFromHit()
+    local sprite = _M.getSprite(_M.leader)
+    if sprite == nil then
+        return 0
+    end
+
+    return sprite.motion == 0x05
 end
 
 function _M.fell()
