@@ -732,7 +732,6 @@ local function mainLoop(currentSpecies, topGenome)
 				table.insert(slice, pool.species[i])
 			end
 		end
-		local finished = 0
 
 		return runner.run(
 			slice,
@@ -741,7 +740,11 @@ local function mainLoop(currentSpecies, topGenome)
 				-- Genome callback
 				-- FIXME Should we do something here??? What was your plan, past me?
 			end
-		):next(function()
+		):next(function(maxFitness)
+			if maxFitness > pool.maxFitness then
+				pool.maxFitness = maxFitness
+			end
+
 			if hasThreads then
 				currentSpecies = currentSpecies + #slice
 			else

@@ -578,7 +578,7 @@ local function mainLoop(_M, genome)
             _M.timeout = 0
         end
 
-        if _M.currentFrame%5 == 0 then
+        if _M.currentFrame % 5 == 0 then
             local inputs, inputDeltas = game.getInputs()
             if game.bonusScreenDisplayed(inputs) and _M.timeout > -1000 and _M.timeout < timeoutConst then
                 _M.timeout = timeoutConst
@@ -639,7 +639,7 @@ local function mainLoop(_M, genome)
 
         -- Continue if we haven't timed out
         local timeoutBonus = _M.currentFrame / 4
-        if _M.timeout + timeoutBonus > 0 then
+        if _M.timeout + timeoutBonus > 0 or _M.currentFrame % 5 ~= 0 then
             return mainLoop(_M, genome)
         end
         
@@ -686,7 +686,7 @@ local function mainLoop(_M, genome)
         end
         genome.fitness = fitness
         
-        if fitness > _M.maxFitness then
+        if _M.maxFitness == nil or fitness > _M.maxFitness then
             _M.maxFitness = fitness
         end
 
@@ -712,7 +712,7 @@ local function mainLoop(_M, genome)
                 input.keyhook("9", false)
                 input.keyhook("tab", false)
 
-                return
+                return _M.maxFitness
             end
         end
 
@@ -910,7 +910,7 @@ return function(promise)
         currentGenomeIndex = 1,
         currentFrame = 0,
         drawFrame = 0,
-        maxFitness = 0,
+        maxFitness = nil,
 
         dereg = {},
         inputmode = false,

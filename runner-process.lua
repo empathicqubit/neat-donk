@@ -124,9 +124,10 @@ local function waitLoop(inputLine)
                     speciesId = speciesId,
                 })
             end
-        ):next(function()
+        ):next(function(maxFitness)
             writeResponse({
                 type = 'onFinish',
+                maxFitness = maxFitness,
                 speciesId = speciesId,
             })
         end)

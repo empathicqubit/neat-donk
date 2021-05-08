@@ -174,6 +174,7 @@ return function(promise)
 
             message(_M, 'Waiting for child processes to finish')
 
+            local maxFitness = nil
             local function readLoop(outputPipe)
                 return util.promiseWrap(function()
                     return outputPipe:read("*l")
@@ -210,12 +211,15 @@ return function(promise)
                         end
                         genomeCallback(obj.genome, obj.index)
                     elseif obj.type == 'onFinish' then
+                        if maxFitness == nil or obj.maxFitness > maxFitness then
+                            maxFitness = obj.maxFitness
+                        end
                         return true
                     end
 
                 end):next(function(finished)
                     if finished then
-                        return
+                        return maxFitness
                     end
 
                     return readLoop(outputPipe)
@@ -230,8 +234,16 @@ return function(promise)
             end
 
             return Promise.all(table.unpack(waiters))
-        end):next(function()
+        end):next(function(maxFitnesses)
             message(_M, 'Child processes finished')
+            local maxestFitness = maxFitnesses[1]
+            for i=1,#maxFitnesses,1 do
+                local maxFitness = maxFitnesses[i]
+                if maxFitness > maxestFitness then
+                    maxestFitness = maxFitness
+                end
+            end
+            return maxestFitness
         end)
     end
 
