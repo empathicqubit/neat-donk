@@ -86,10 +86,9 @@ runner.onLoad(function(filename)
     })
 end)
 
-runner.onReset(function(filename)
+runner.onReset(function()
     writeResponse({
         type = 'onReset',
-        filename = filename,
         speciesId = speciesId,
     })
 end)
