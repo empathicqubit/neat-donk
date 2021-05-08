@@ -201,6 +201,7 @@ return function(promise)
                         for i=1,#speciesSlice,1 do
                             local s = speciesSlice[i]
                             if s.id == obj.speciesId then
+                                message(_M, string.format('Write Species %d Genome %d', obj.speciesId, obj.genomeIndex))
                                 s.genomes[obj.genomeIndex] = obj.genome
                                 break
                             end
@@ -225,8 +226,6 @@ return function(promise)
                 local outputPipe = _M.poppets[i].output
                 local waiter = util.promiseWrap(function()
                     local line = outputPipe:read("*l")
-
-                    print("Started receiving output from child process "..i)
 
                     return readLoop(outputPipe, line)
                 end)
