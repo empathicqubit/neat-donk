@@ -28,7 +28,7 @@ _M.State = {
 	"MainbraceMayhemTopOfRope.lsmv", -- [6]
 }
 
-_M.Filename = _M.PoolDir .. _M.State[1]
+_M.Filename = _M.PoolDir .. _M.State[6]
 
 --[[
 	Start game with specific powerup.
@@ -43,7 +43,7 @@ _M.StartPowerup = 0
 _M.NeatConfig = {
 DisableSound = true,
 Threads = 7,
-ShowInterface = true,
+ShowInterface = false,
 --Filename = "DP1.state",
 SaveFile = _M.Filename .. ".pool",
 

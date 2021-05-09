@@ -640,7 +640,7 @@ local function mainLoop(_M, genome)
 
         -- Continue if we haven't timed out
         local timeoutBonus = _M.currentFrame / 4
-        if _M.timeout + timeoutBonus > 0 or _M.currentFrame % 5 ~= 0 then
+        if _M.timeout + timeoutBonus > 0 then
             return mainLoop(_M, genome)
         end
         
