@@ -1,5 +1,5 @@
 --Notes here
-local memory, bit, memory2, input, callback, movie = memory, bit, memory2, input, callback, movie
+local memory, bit, memory2, input, callback, movie, utime = memory, bit, memory2, input, callback, movie, utime
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
@@ -265,11 +265,10 @@ function _M.getWaypoints(startX, startY)
     return collisions
 end
 
-function _M.getGoalHit()
-    local sprites = _M.getSprites()
+function _M.getGoalHit(sprites)
     for i=1,#sprites,1 do
         local sprite = sprites[i]
-        if sprite.control ~= 0x0164 then
+        if sprite.control ~= spritelist.GoodSprites.goalBarrel then
             goto continue
         end
         -- Check if the goal barrel is moving up
@@ -517,9 +516,8 @@ end
 
 -- Currently only for single bananas since they don't
 -- count as regular computed sprites
-function _M.getExtendedSprites()
+function _M.getExtendedSprites(sprites)
     local oam = memory2.OAM:readregion(0x00, 0x220)
-    local sprites = _M.getSprites()
     local extended = {}
 
     for idx=0,0x200/4-1,1 do
@@ -562,21 +560,21 @@ function _M.getExtendedSprites()
 end
 
 function _M.getInputs()
-	_M.getPositions()
-	
-	local sprites = _M.getSprites()
-	local extended = _M.getExtendedSprites()
-	
-	local inputs = {}
-	local inputDeltaDistance = {}
-	
+    _M.getPositions()
+    
+    local sprites = _M.getSprites()
+    local extended = _M.getExtendedSprites(sprites)
+    
+    local inputs = {}
+    local inputDeltaDistance = {}
+
     for dy = -config.BoxRadius, config.BoxRadius, 1 do
         for dx = -config.BoxRadius, config.BoxRadius, 1 do
-			inputs[#inputs+1] = 0
-			inputDeltaDistance[#inputDeltaDistance+1] = 1
-			
-			local tile = _M.getTile(dx, dy)
-			if tile == 1 then
+            inputs[#inputs+1] = 0
+            inputDeltaDistance[#inputDeltaDistance+1] = 1
+            
+            local tile = _M.getTile(dx, dy)
+            if tile == 1 then
                 if inputs[#inputs-config.BoxRadius*2-1] == -1 then
                     inputs[#inputs] = -1
                 else
@@ -601,42 +599,43 @@ function _M.getInputs()
                         inputs[#inputs] = -1
                     end
                 end
-			end
-			
-			for i = 1,#sprites do
+            end
+            
+            for i = 1,#sprites do
                 local sprite = sprites[i]
-				local distx = math.abs(sprite.x - (_M.partyX+dx*mem.size.tile))
-				local disty = math.abs(sprite.y - (_M.partyY+dy*mem.size.tile))
+                if sprite.good == 0 then
+                    goto continue
+                end
+
+                local distx = math.abs(sprite.x - (_M.partyX+dx*mem.size.tile))
+                local disty = math.abs(sprite.y - (_M.partyY+dy*mem.size.tile))
                 local dist = math.sqrt((distx * distx) + (disty * disty))
-				if dist <= mem.size.tile * 1.25 then
-                    if sprite.good == 0 then
-                        goto continue
+                if dist <= mem.size.tile * 1.25 then
+                    inputs[#inputs] = sprite.good
+                    
+                    if dist > mem.size.tile then
+                        inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
                     end
-					inputs[#inputs] = sprite.good
-					
-					if dist > mem.size.tile then
-						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
-					end
-				end
+                end
                 ::continue::
-			end
+            end
 
- 			for i = 1,#extended do
-				local distx = math.abs(extended[i]["x"]+_M.cameraX - (_M.partyX+dx*mem.size.tile))
-				local disty = math.abs(extended[i]["y"]+_M.cameraY - (_M.partyY+dy*mem.size.tile))
-				if distx < mem.size.tile / 2 and disty < mem.size.tile / 2 then
-					
-					inputs[#inputs] = extended[i]["good"]
-					local dist = math.sqrt((distx * distx) + (disty * disty))
-					if dist > mem.size.tile / 2 then
-						inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
-					end
-				end
-			end
-		end
-	end
+            for i = 1,#extended do
+                local distx = math.abs(extended[i]["x"]+_M.cameraX - (_M.partyX+dx*mem.size.tile))
+                local disty = math.abs(extended[i]["y"]+_M.cameraY - (_M.partyY+dy*mem.size.tile))
+                if distx < mem.size.tile / 2 and disty < mem.size.tile / 2 then
+                    
+                    inputs[#inputs] = extended[i]["good"]
+                    local dist = math.sqrt((distx * distx) + (disty * disty))
+                    if dist > mem.size.tile / 2 then
+                        inputDeltaDistance[#inputDeltaDistance] = mathFunctions.squashDistance(dist)
+                    end
+                end
+            end
+        end
+    end
 
-	return inputs, inputDeltaDistance
+    return inputs, inputDeltaDistance
 end
 
 function _M.getClimbing()

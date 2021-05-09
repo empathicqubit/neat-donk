@@ -18,6 +18,44 @@ function _M.promiseWrap(next, value)
     return promise:next(next)
 end
 
+local times = {}
+
+--- Track how long a function takes
+---@param toCall function Function that executes synchronously
+---@param name string What to print in the finish text
+---@return any any The original value
+function _M.time(toCall, name)
+    if name == nil then
+        name = 'function'
+    end
+
+    local sec, usec = utime()
+    local startTime = sec * 1000000 + usec
+    local finishTime = 0
+    local ret = toCall()
+    sec, usec = utime()
+    finishTime = sec * 1000000 + usec
+    local t = times[name]
+    if t == nil then
+        t = {}
+        times[name] = t
+    end
+
+    if #t > 50 then
+        table.remove(t, 1)
+    end
+
+    t[#t+1] = finishTime - startTime
+    local sum = 0
+    for i=1,#t,1 do
+        sum = sum + t[i]
+    end
+
+    print(name..' is averaging '..math.floor(sum / #t))
+
+    return ret
+end
+
 --- Wait for a specified amount of time. Note that this is dependent on the
 --- timer timeout getting set elsewhere in the code, probably in the Promise
 --- handler setup
@@ -38,6 +76,30 @@ function _M.delay(delayUsec)
             end
         end
         unTimer = callback.register('timer', onTimer)
+    end)
+end
+
+function _M.saveState(filename)
+    return Promise.new(function(res, rej)
+        local unSave = nil
+        local unErrSave = nil
+        local function errSave(f)
+            if f == filename then
+                callback.unregister('post_save', unSave)
+                callback.unregister('err_save', unErrSave)
+                rej()
+            end
+        end
+        local function postSave(f)
+            if f == filename then
+                callback.unregister('post_save', unSave)
+                callback.unregister('err_save', unErrSave)
+                res()
+            end
+        end
+        unSave = callback.register('post_save', postSave)
+        unErrSave = callback.register('err_save', errSave)
+        exec('save-state '..filename)
     end)
 end
 

@@ -25,9 +25,10 @@ _M.State = {
     -- W1.2 Mainbrace Mayhem
     "MainbraceMayhem.lsmv", -- [4]
 	"MainbraceMayhemBonus.lsmv", -- [5]
+	"MainbraceMayhemTopOfRope.lsmv", -- [6]
 }
 
-_M.Filename = _M.PoolDir .. _M.State[4]
+_M.Filename = _M.PoolDir .. _M.State[1]
 
 --[[
 	Start game with specific powerup.
@@ -61,7 +62,7 @@ BiasMutationChance = 0.40,
 StepSize = 0.1,
 DisableMutationChance = 0.4,
 EnableMutationChance = 0.2,
-TimeoutConstant = 20,
+TimeoutConstant = 30,
 MaxNodes = 1000000,
 }
 

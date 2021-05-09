@@ -579,7 +579,8 @@ local function mainLoop(_M, genome)
         end
 
         if _M.currentFrame % 5 == 0 then
-            local inputs, inputDeltas = game.getInputs()
+            local sprites = game.getSprites()
+            local inputs, inputDeltas = game.getInputs(sprites)
             if game.bonusScreenDisplayed(inputs) and _M.timeout > -1000 and _M.timeout < timeoutConst then
                 _M.timeout = timeoutConst
             end
@@ -677,10 +678,13 @@ local function mainLoop(_M, genome)
             message(_M, "Extra live bonus added " .. extraLiveBonus)
         end
 
-        if game.getGoalHit() then
+        local sprites = game.getSprites()
+        -- FIXME We should test this before we time out
+        if game.getGoalHit(sprites) then
             fitness = fitness + 1000
             message(_M, string.format("LEVEL WON! Fitness: %d", fitness), 0x0000ff00)
         end
+
         if fitness == 0 then
             fitness = -1
         end
