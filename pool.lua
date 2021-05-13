@@ -411,6 +411,9 @@ local function bytes(x)
     return string.char(b1,b2,b3,b4)
 end
 
+--- Saves the pool to a gzipped Serpent file
+---@param filename string Filename to write
+---@return Promise Promise A promise that resolves when the file is saved.
 local function writeFile(filename)
 	return util.promiseWrap(function ()
 		local file = io.open(filename, "w")
@@ -659,7 +662,11 @@ local function newGeneration()
 	
 	pool.generation = pool.generation + 1
 	
-	writeFile(_M.saveLoadFile .. ".gen" .. pool.generation .. ".pool")
+	return writeFile(_M.saveLoadFile .. ".gen" .. pool.generation .. ".pool"):next(function()
+		if config.NeatConfig.AutoSave then
+			return writeFile(_M.saveLoadFile)
+		end
+	end)
 end
 
 local function reset()
@@ -686,7 +693,7 @@ end)
 local playTop = nil
 local topRequested = false
 
-local loadRequested = false
+local loadRequested = config.NeatConfig.AutoSave
 local saveRequested = false
 local resetRequested = false
 local function mainLoop(currentSpecies, topGenome)

@@ -44,8 +44,9 @@ _M.NeatConfig = {
 DisableSound = true,
 Threads = 7,
 ShowInterface = false,
+AutoSave = true,
 --Filename = "DP1.state",
-SaveFile = _M.Filename .. ".pool",
+SaveFile = _M.PoolDir .. "bigbrain.pool",
 
 Filename = _M.Filename,
 Population = 300,

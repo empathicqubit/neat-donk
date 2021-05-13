@@ -1,3 +1,4 @@
+local mem = require "mem"
 local gui, input, movie, settings, exec, callback, set_timer_timeout = gui, input, movie, settings, exec, callback, set_timer_timeout
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
@@ -541,14 +542,19 @@ local function mainLoop(_M, genome)
                     preferredExit = preferredExit,
                     waypoints = game.getWaypoints(preferredExit.x, preferredExit.y),
                 }
-                -- XXX Insert means add a new one, not overwrite?
                 table.insert(areaInfo.waypoints, 1, preferredExit)
 
-                for i=1,#areaInfo.waypoints,1 do
+                for i=#areaInfo.waypoints,1,-1 do
                     local waypoint = areaInfo.waypoints[i]
+                    if waypoint.y > game.partyY + mem.size.tile * 7 then
+                        message(_M, string.format('Skipped waypoint %d,%d', waypoint.x, waypoint.y), 0x00ffff00)
+                        table.remove(areaInfo.waypoints, i)
+                        goto continue
+                    end
                     local startDistance = math.floor(math.sqrt((waypoint.y - game.partyY) ^ 2 + (waypoint.x - game.partyX) ^ 2))
                     waypoint.startDistance = startDistance
                     waypoint.shortest = startDistance
+                    ::continue::
                 end
 
                 _M.areaInfo[_M.currentArea] = areaInfo
