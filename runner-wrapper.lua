@@ -158,21 +158,13 @@ return function(promise)
         onReset(_M, handler)
     end
 
-    _M.run = function(speciesSlice, generationIdx, genomeCallback)
+    _M.run = function(species, generationIdx, genomeCallback)
         local promise = Promise.new()
         promise:resolve()
         return promise:next(function()
-            return launchChildren(_M, #speciesSlice)
+            return launchChildren(_M, config.NeatConfig.Threads)
         end):next(function()
             message(_M, 'Setting up child processes')
-
-            for i=1,#speciesSlice,1 do
-                local inputPipe = _M.poppets[i].input
-                inputPipe:write(serpent.dump({speciesSlice[i], generationIdx}).."\n")
-                inputPipe:flush()
-            end
-
-            message(_M, 'Waiting for child processes to finish')
 
             local maxFitness = nil
             local function readLoop(outputPipe)
@@ -201,8 +193,8 @@ return function(promise)
                     elseif obj.type == 'onReset' then
                         reset(_M)
                     elseif obj.type == 'onGenome' then
-                        for i=1,#speciesSlice,1 do
-                            local s = speciesSlice[i]
+                        for i=1,#species,1 do
+                            local s = species[i]
                             if s.id == obj.speciesId then
                                 message(_M, string.format('Write Species %d Genome %d', obj.speciesId, obj.genomeIndex))
                                 s.genomes[obj.genomeIndex] = obj.genome
@@ -227,11 +219,32 @@ return function(promise)
             end
 
             local waiters = {}
-            for i=1,#speciesSlice,1 do
-                local outputPipe = _M.poppets[i].output
-                local waiter = readLoop(outputPipe)
-                table.insert(waiters, waiter)
+            for t=1,config.NeatConfig.Threads,1 do
+                waiters[t] = Promise.new()
+                waiters[t]:resolve()
             end
+
+            local currentSpecies = 1
+            while currentSpecies < #species do
+                for t=1,config.NeatConfig.Threads,1 do
+                    local s = species[currentSpecies]
+                    if s == nil then
+                        break
+                    end
+
+                    waiters[t] = waiters[t]:next(function()
+                        local inputPipe = _M.poppets[t].input
+                        inputPipe:write(serpent.dump({s, generationIdx}).."\n")
+                        inputPipe:flush()
+
+                        local outputPipe = _M.poppets[t].output
+                        return readLoop(outputPipe)
+                    end)
+                    currentSpecies = currentSpecies + 1
+                end
+            end
+
+            message(_M, 'Waiting for child processes to finish')
 
             return Promise.all(table.unpack(waiters))
         end):next(function(maxFitnesses)

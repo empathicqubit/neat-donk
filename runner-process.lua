@@ -40,6 +40,14 @@ local function writeResponse(object)
     outputPipe:flush()
 end
 
+local function unblockLoop()
+    return util.delay(1000000):next(function()
+        outputPipe:write(".\n")
+        outputPipe:flush()
+        return unblockLoop()
+    end)
+end
+
 local runner = Runner(Promise)
 runner.onMessage(function(msg, color)
     statusLine = msg
@@ -147,7 +155,9 @@ writeResponse({ type = 'onInit', ts = ts })
 
 print(string.format('Wrote init to output at %d', ts))
 
-waiter:next(waitLoop):catch(function(error)
+waiter:next(function(inputLine)
+    return waitLoop(inputLine)
+end):catch(function(error)
     if type(error) == "table" then
         error = "\n"..table.concat(error, "\n")
     end

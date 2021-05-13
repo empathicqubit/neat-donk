@@ -729,14 +729,7 @@ local function mainLoop(currentSpecies, topGenome)
 		end
 
 		if hasThreads then
-			slice = {}
-			for i=currentSpecies, currentSpecies + config.NeatConfig.Threads - 1, 1 do
-				if pool.species[i] == nil then
-					break
-				end
-
-				table.insert(slice, pool.species[i])
-			end
+			slice = pool.species
 		end
 
 		return runner.run(
