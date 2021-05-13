@@ -2,7 +2,7 @@
 
 An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 
-See [YouTube](https://www.youtube.com/watch?v=Q69_wmEkp-k) for an example run.
+See [YouTube](https://www.youtube.com/watch?v=-_UyUbObLeE) for an example run.
 
 ## Requirements
 
