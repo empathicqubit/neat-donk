@@ -1,5 +1,5 @@
 local mem = require "mem"
-local gui, input, movie, settings, exec, callback, set_timer_timeout = gui, input, movie, settings, exec, callback, set_timer_timeout
+local gui, input, movie, settings, exec, callback, set_timer_timeout, memory, bsnes = gui, input, movie, settings, exec, callback, set_timer_timeout, memory, bsnes
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 local Promise = nil
@@ -481,6 +481,19 @@ local function initializeRun(_M)
     gui.subframe_update(false)
 
     return rewind():next(function()
+        bsnes.enablelayer(0, 0, true)
+        bsnes.enablelayer(0, 1, false)
+        bsnes.enablelayer(1, 0, false)
+        bsnes.enablelayer(1, 1, false)
+        bsnes.enablelayer(2, 0, false)
+        bsnes.enablelayer(2, 1, false)
+        bsnes.enablelayer(3, 0, false)
+        bsnes.enablelayer(3, 1, false)
+        bsnes.enablelayer(4, 0, true)
+        bsnes.enablelayer(4, 1, true)
+        bsnes.enablelayer(4, 2, true)
+        bsnes.enablelayer(4, 3, true)
+
         if config.StartPowerup ~= nil then
             game.writePowerup(config.StartPowerup)
         end
