@@ -75,7 +75,7 @@ lsnes and it will display a message to the Lua console and stderr on how to use 
 
 ## Notes
 * Only tested on Pirate Panic
-* The pool files are gzipped Serpent data
+* The pool files are PKZIP files with one file, data.serpent, containing Serpent-formatted data
 
 ## Credits
 

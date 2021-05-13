@@ -1,4 +1,4 @@
-local callback, set_timer_timeout = callback, set_timer_timeout
+local callback, set_timer_timeout, zip = callback, set_timer_timeout, zip
 
 local base = string.gsub(@@LUA_SCRIPT_FILENAME@@, "(.*[/\\])(.*)", "%1")
 
@@ -7,7 +7,7 @@ local Promise = dofile(base.."/promise.lua")
 local config = dofile(base.."/config.lua")
 local util = dofile(base.."/util.lua")(Promise)
 local serpent = dofile(base.."/serpent.lua")
-local libDeflate = dofile(base.."/LibDeflate.lua")
+local zzlib = dofile(base.."/zzlib.lua")
 
 local hasThreads = config.NeatConfig.Threads > 1
 
@@ -416,14 +416,12 @@ end
 ---@return Promise Promise A promise that resolves when the file is saved.
 local function writeFile(filename)
 	return util.promiseWrap(function ()
-		local file = io.open(filename, "w")
+		local file = zip.writer.new(filename)
+		file:create_file('data.serpent')
 		local dump = serpent.dump(pool)
-		local zlib = libDeflate:CompressDeflate(dump)
-		file:write("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x00")
-		file:write(zlib)
-		file:write(string.char(0,0,0,0))
-		file:write(bytes(#dump % (2^32)))
-		file:close()
+		file:write(dump)
+		file:close_file()
+		file:commit()
 	end)
 end
 
@@ -437,7 +435,8 @@ local function loadFile(filename)
 			return
 		end
 		local contents = file:read("*all")
-		local decomp, _ = libDeflate:DecompressDeflate(contents:sub(11, #contents - 8))
+		file:close()
+		local decomp = zzlib.unzip(contents, 'data.serpent')
 		local ok, obj = serpent.load(decomp)
 		if not ok then
 			message("Error parsing pool file", 0x00990000)
