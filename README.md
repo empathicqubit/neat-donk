@@ -2,7 +2,7 @@
 
 An AI based on SethBling's MarI/O to play Donkey Kong Country 2 with lsnes.
 
-See [YouTube](https://www.youtube.com/watch?v=-_UyUbObLeE) for an example run.
+See [YouTube](https://www.youtube.com/watch?v=-\_UyUbObLeE) for an example run.
 
 ## Requirements
 
@@ -34,6 +34,7 @@ choco install --version 2.0.24-rrtest-1613424691 lsnes
 
 Look at config.lua for some settings you can change. Not all have been tested.
 
+* `_M.ROM`: The ROM path, `rom.sfc` by default.
 * `_M.Filename`: Change the number to a different one from the `_M.State` list
 to load a different file.
 * `_M.NeatConfig.Threads`: Change this to 1 to prevent multiple instances of 
