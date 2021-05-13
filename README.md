@@ -28,8 +28,7 @@ choco install --version 2.0.24-rrtest-1613424691 lsnes
 
 1. Start lsnes
 2. Go to `Configure -> Settings -> Advanced` and change `LUA -> Maximum memory use` to `1024MB`
-3. Load the DKC2 ROM if you aren't using threads: `File -> Load -> ROM...`
-4. Load the `neat-donk.lua` script: `Tools -> Run Lua script...`
+3. Load the `neat-donk.lua` script: `Tools -> Run Lua script...`
 
 ## Config
 
