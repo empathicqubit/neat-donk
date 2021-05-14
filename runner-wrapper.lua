@@ -232,12 +232,12 @@ return function(promise)
                         break
                     end
 
+                    local inputPipe = _M.poppets[t].input
+                    local outputPipe = _M.poppets[t].output
                     waiters[t] = waiters[t]:next(function()
-                        local inputPipe = _M.poppets[t].input
                         inputPipe:write(serpent.dump({s, generationIdx}).."\n")
                         inputPipe:flush()
 
-                        local outputPipe = _M.poppets[t].output
                         return readLoop(outputPipe)
                     end)
                     currentSpecies = currentSpecies + 1

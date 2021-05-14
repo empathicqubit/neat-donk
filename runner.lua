@@ -570,6 +570,8 @@ local function mainLoop(_M, genome)
                     ::continue::
                 end
 
+                message(_M, string.format('Found %d waypoints', #areaInfo.waypoints))
+
                 _M.areaInfo[_M.currentArea] = areaInfo
             end)
         end
